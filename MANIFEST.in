@@ -1,4 +1,6 @@
 include README.md
 include LICENSE
 include requirements.txt
+include grasp/sysdata/_Catalogue.xml
+include grasp/sysdata/base.frm
 recursive-include my_package *
