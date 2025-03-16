@@ -7,9 +7,9 @@ from grasp.formulary import Formulary
 
 # Language: python
 
-class TestShowFormulaSymbols(unittest.TestCase):
+class TestFormulary(unittest.TestCase):
     def setUp(self):
-        self.x, self.y = sp.symbols('x y')
+        self.x, self.y = sp.symbols('x, y')
         self.formulary = Formulary(
             name='test_formulary',
             formula_names=['test_formula'],
