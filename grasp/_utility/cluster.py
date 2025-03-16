@@ -163,12 +163,22 @@ class Cluster:
                 potential.
                 'rho': the noralized density profile of the clusted.
         """
+        model = Table()
         try:
-            model = Table()
-            file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
-            model["xi"] = np.loadtxt(file, skiprows=1, usecols=1)
-            model["w"] = np.loadtxt(file, skiprows=1, usecols=2)
-            model["rho"] = np.loadtxt(file, skiprows=1, usecols=3)
+            try:
+                file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
+                model["xi"] = np.loadtxt(file, skiprows=1, usecols=1)
+                model["w"] = np.loadtxt(file, skiprows=1, usecols=2)
+                model["rho"] = np.loadtxt(file, skiprows=1, usecols=3)
+            except Exception:
+                import io, re
+                file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
+                with open(file, "r") as f:
+                    content = f.read()
+                content_fixed = re.sub(r'(?<=[0-9])-(?=\d)', r' -', content)
+                model['xi'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=1)
+                model['w'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=2)
+                model['rho'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=3)
         except FileNotFoundError:
             from grasp.analyzers.king import king_integrator
             print(
@@ -177,7 +187,6 @@ class Cluster:
             if not os.path.exists(self.model_path):
                 os.mkdir(self.model_path)
             result = king_integrator(self.w0)
-            model = Table()
             mod = pd.read_csv(result, delim_whitespace=True, skipfooter=1)
             model["xi"] = mod.xi
             model["w"] = mod.w
