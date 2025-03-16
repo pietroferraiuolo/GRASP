@@ -9,6 +9,9 @@ grasp/__pycache__/
 grasp/analyzers/__pycache__/
 grasp/analyzers/_Rcode/__pycache__/
 grasp/_utility/__pycache__/
+test/__pycache__/
+test/analyzers/__pycache__/
+test/_utility/__pycache__/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
