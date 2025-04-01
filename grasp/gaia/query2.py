@@ -233,31 +233,31 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
-            ra : float or str
-                Right ascension coordinate for the centre of the scan (if no gc is provided).
-            dec : float or str
-                Declination coordinate for the centre of the scan (if no gc is provided)
-            name : str
-                String which provides the folder name where to save the data.
-                Needed if no 'gc' object is supplied: if it is not given, and
-                save was True, the data will be stored in the 'UntrackedData'
-                folder.
-            data : str or list of str
-                List of parameters to retrieve, from the ones printed by ''.print_table()''.
-                If this argument is missing, the only parameter retrieved is 'source_id'.
-                Aliases:
-                    'dat'
-                    'data'
-                    'params'
-                    'parameters'
-            conditions : str or list of str
-                Listo of conditions on the parameters to apply upon scanning the
-                archive. If no conditions are supplied, no conditions are applied.
-                Aliases:
-                    'cond'
-                    'conds'
-                    'condition'
-                    'conditions'
+        ra : float or str
+            Right ascension coordinate for the centre of the scan (if no gc is provided).
+        dec : float or str
+            Declination coordinate for the centre of the scan (if no gc is provided)
+        name : str
+            String which provides the folder name where to save the data.
+            Needed if no 'gc' object is supplied: if it is not given, and
+            save was True, the data will be stored in the 'UntrackedData'
+            folder.
+        data : str or list of str
+            List of parameters to retrieve, from the ones printed by ''.print_table()''.
+            If this argument is missing, the only parameter retrieved is 'source_id'.
+            Aliases:
+                'dat'
+                'data'
+                'params'
+                'parameters'
+        conditions : str or list of str
+            Listo of conditions on the parameters to apply upon scanning the
+            archive. If no conditions are supplied, no conditions are applied.
+            Aliases:
+                'cond'
+                'conds'
+                'condition'
+                'conditions'
 
         Returns
         -------
@@ -316,57 +316,34 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
-            ra : float or str
-                Right ascension coordinate for the centre of the scan (if no gc is provided).
-            dec : float or str
-                Declination coordinate for the centre of the scan (if no gc is provided)
-            name : str
-                String which provides the folder name where to save the data.
-                Needed if no 'gc' object is supplied: if it is not given, and
-                save was True, the data will be stored in the 'UntrackedData'
-                folder.
-            conditions : str or list of str
-                List of conditions on the parameters to apply upon scanning the
-                archive. If no conditions are supplied, no conditions are applied.
-                Aliases:
-                    'cond'
-                    'conds'
-                    'condition'
-                    'conditions'
+        ra : float or str
+            Right ascension coordinate for the centre of the scan (if no gc is provided).
+        dec : float or str
+            Declination coordinate for the centre of the scan (if no gc is provided)
+        name : str
+            String which provides the folder name where to save the data.
+            Needed if no 'gc' object is supplied: if it is not given, and
+            save was True, the data will be stored in the 'UntrackedData'
+            folder.
+        conditions : str or list of str
+            List of conditions on the parameters to apply upon scanning the
+            archive. If no conditions are supplied, no conditions are applied.
+            Aliases:
+                'cond'
+                'conds'
+                'condition'
+                'conditions'
 
         Returns
         -------
         astro_cluster : astropy.Table
             Astropy table with  the query results.
         """
-        ra = kwargs.get("ra", None)
-        dec = kwargs.get("dec", None)
-        name = kwargs.get("name", "UntrackedData")
-        gc, ra, dec, savename = self._get_coordinates(gc, ra=ra ,dec=dec ,name=name)
-        astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error, pmra, pmra_error, pmdec, pmdec_error"
-        self._queryInfo = {
-            "Scan Info": {
-                "RA": ra,
-                "DEC": dec,
-                "Scan Radius": radius,
-                "Data Acquired": astrometry,
-            },
-            "Flag": {"Query": "astrometry"},
-        }
-        cond = get_kwargs(("cond", "conds", "conditions", "condition"), "None", kwargs)
-        if isinstance(cond, list):
-            ccond = ""
-            for c in range(len(cond) - 1):
-                ccond += cond[c] + ", "
-            ccond += cond[-1]
-            self._queryInfo["Scan Info"]["Conditions Applied"] = ccond
-        else:
-            self._queryInfo["Scan Info"]["Conditions Applied"] = cond
-        astro_cluster = self._run_query(
-            savename, ra, dec, radius, astrometry, cond, save
-        )
-        astro_sample = _Sample(astro_cluster, gc=gc)
-        astro_sample.qinfo = self._queryInfo["Scan Info"]
+        astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error,\
+              pmra, pmra_error, pmdec, pmdec_error"
+        astro_sample = self.free_query(radius, gc, save, data = astrometry, **kwargs)
+        self._queryInfo['Scan Info']['Data Acquired'] = astrometry
+        self._queryInfo['Flag']['Query'] = 'astrometry'
         return astro_sample
 
     def get_photometry(
@@ -394,57 +371,35 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
-            ra : float or str
-                Right ascension coordinate for the centre of the scan (if no gc is provided).
-            dec : float or str
-                Declination coordinate for the centre of the scan (if no gc is provided)
-            name : str
-                String which provides the folder name where to save the data.
-                Needed if no 'gc' object is supplied: if it is not given, and
-                save was True, the data will be stored in the 'UntrackedData'
-                folder.
-            conditions : str or list of str
-                Listo of conditions on the parameters to apply upon scanning the
-                archive. If no conditions are supplied, no conditions are applied.
-                Aliases:
-                    'cond'
-                    'conds'
-                    'condition'
-                    'conditions'
+        ra : float or str
+            Right ascension coordinate for the centre of the scan (if no gc is provided).
+        dec : float or str
+            Declination coordinate for the centre of the scan (if no gc is provided)
+        name : str
+            String which provides the folder name where to save the data.
+            Needed if no 'gc' object is supplied: if it is not given, and
+            save was True, the data will be stored in the 'UntrackedData'
+            folder.
+        conditions : str or list of str
+            Listo of conditions on the parameters to apply upon scanning the
+            archive. If no conditions are supplied, no conditions are applied.
+            Aliases:
+                'cond'
+                'conds'
+                'condition'
+                'conditions'
 
         Returns
         -------
         photo_cluster : astropy.Table
             Astropy table with the results.
         """
-        ra = kwargs.get("ra", None)
-        dec = kwargs.get("dec", None)
-        name = kwargs.get("name", "UntrackedData")
-        gc, ra, dec, savename = self._get_coordinates(gc, ra=ra ,dec=dec ,name=name)
-        photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
-        self._queryInfo = {
-            "Scan Info": {
-                "RA": ra,
-                "DEC": dec,
-                "Scan Radius": radius,
-                "Data Acquired": photometry,
-            },
-            "Flag": {"Query": "photometry"},
-        }
-        cond = get_kwargs(("cond", "conds", "conditions", "condition"), "None", kwargs)
-        if isinstance(cond, list):
-            ccond = ""
-            for c in range(len(cond) - 1):
-                ccond += cond[c] + ", "
-            ccond += cond[-1]
-            self._queryInfo["Scan Info"]["Conditions Applied"] = ccond
-        else:
-            self._queryInfo["Scan Info"]["Conditions Applied"] = cond
-        photo_cluster = self._run_query(
-            savename, ra, dec, radius, photometry, cond, save
-        )
-        phot_sample = _Sample(photo_cluster, gc=gc)
-        phot_sample.qinfo = self._queryInfo["Scan Info"]
+        
+        photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, \
+              phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
+        phot_sample = self.free_query(radius, gc, save, data = photometry, **kwargs)
+        self._queryInfo['Scan Info']['Data Acquired'] = photometry
+        self._queryInfo['Flag']['Query'] = 'photometry'
         return phot_sample
 
     def get_rv(
@@ -471,54 +426,38 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
-            ra : float or str
-                Right ascension coordinate for the centre of the scan (if no gc is provided).
-            dec : float or str
-                Declination coordinate for the centre of the scan (if no gc is provided)
-            name : str
-                String which provides the folder name where to save the data.
-                Needed if no 'gc' object is supplied: if it is not given, and
-                save was True, the data will be stored in the 'UntrackedData'
-                folder.
-            conditions : str or list of str
-                Listo of conditions on the parameters to apply upon scanning the
-                archive. If no conditions are supplied, no conditions are applied.
-                Aliases:
-                    'cond'
-                    'conds'
-                    'condition'
-                    'conditions'
+        ra : float or str
+            Right ascension coordinate for the centre of the scan (if no gc is provided).
+        dec : float or str
+            Declination coordinate for the centre of the scan (if no gc is provided)
+        name : str
+            String which provides the folder name where to save the data.
+            Needed if no 'gc' object is supplied: if it is not given, and
+            save was True, the data will be stored in the 'UntrackedData'
+            folder.
+        conditions : str or list of str
+            Listo of conditions on the parameters to apply upon scanning the
+            archive. If no conditions are supplied, no conditions are applied.
+            Aliases:
+                'cond'
+                'conds'
+                'condition'
+                'conditions'
         Returns
         -------
         rv_cluster : astropy.Table
             Astropy t able with te result.
         """
-        ra = kwargs.get("ra", None)
-        dec = kwargs.get("dec", None)
-        name = kwargs.get("name", "UntrackedData")
-        gc, ra, dec, savename = self._get_coordinates(gc, ra=ra ,dec=dec ,name=name)
+        
         rv = "source_id, radial_velocity, radial_velocity_error"
-        self._queryInfo = {
-            "Scan Info": {
-                "RA": ra,
-                "DEC": dec,
-                "Scan Radius": radius,
-                "Data Acquired": rv,
-            },
-            "Flag": {"Query": "radvel"},
-        }
-        cond = get_kwargs(("cond", "conds", "conditions", "condition"), "None", kwargs)
-        if isinstance(cond, list):
-            ccond = ""
-            for c in range(len(cond) - 1):
-                ccond += cond[c] + ", "
-            ccond += cond[-1]
-            self._queryInfo["Scan Info"]["Conditions Applied"] = ccond
-        else:
-            self._queryInfo["Scan Info"]["Conditions Applied"] = cond
-        rv_cluster = self._run_query(savename, ra, dec, radius, rv, cond, save)
-        rv_sample = _Sample(rv_cluster, gc=gc)
-        rv_sample.qinfo = self._queryInfo["Scan Info"]
+        conditions = get_kwargs(("cond", "conds", "conditions", "condition"), "None", kwargs)
+        if conditions == "None":
+            conditions = "radial_velocity IS NOT NULL"
+        else: 
+            conditions += ", radial_velocity IS NOT NULL"
+        rv_sample = self.free_query(radius, gc, save, data = rv, conditions=conditions, **kwargs)
+        self._queryInfo['Scan Info']['Data Acquired'] = rv
+        self._queryInfo['Flag']['Query'] = 'radial velocity'
         return rv_sample
 
     def _run_query(self, gc_id, ra, dec, radius, data, cond, save):

@@ -187,7 +187,7 @@ class Cluster:
             if not os.path.exists(self.model_path):
                 os.mkdir(self.model_path)
             result = king_integrator(self.w0)
-            mod = pd.read_csv(result, delim_whitespace=True, skipfooter=1)
+            mod = pd.read_csv(result, sep='\s+', skipfooter=1, engine='python')
             model["xi"] = mod.xi
             model["w"] = mod.w
             model["rho"] = mod.rho_rho0
@@ -226,3 +226,20 @@ Harris Catalog 2010 edition Parameters
 .rt      Tidal Radius       {self.rt:.3f}
 """
         return text
+
+
+
+def available_clusters():
+    """
+    Prints all the available clusters present tin the Harris Catalog 2010
+    edition.
+    The clusters are stored in the grasp/sysdata/_Catalogue.xlsx file.
+
+    Returns
+    -------
+    list
+        List of available clusters.
+    """
+    catalog = pd.read_excel(CATALOG_FILE, index_col=0)
+    print (f"Available clusters: {len(catalog)}")
+    print (f"{catalog.index.tolist()}")
