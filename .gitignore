@@ -152,3 +152,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+grasp/analyzers/_king/profiles.dat
