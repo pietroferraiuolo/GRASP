@@ -241,5 +241,5 @@ def available_clusters():
         List of available clusters.
     """
     catalog = pd.read_excel(CATALOG_FILE, index_col=0)
-    print (f"Available clusters: {len(catalog)}")
-    print (f"{catalog.index.tolist()}")
+    print(f"Available clusters: {len(catalog)}")
+    print(f"{catalog.index.tolist()}")
