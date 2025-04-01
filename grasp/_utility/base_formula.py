@@ -127,7 +127,7 @@ Correlations: {self._correlations}
                 variables += self._correlations
                 if correlations is None:
                     correlations = [
-                        np.zeros(len(data[0])) for _ in range(len(self._correlations))
+                        _np.zeros(len(data[0])) for _ in range(len(self._correlations))
                     ]
                 self._errors = compute_error(
                     self._errFormula, variables, data, errors, corr_values=correlations

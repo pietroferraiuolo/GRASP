@@ -22,7 +22,7 @@ import seaborn as sns
 import matplotlib.pyplot as _plt
 from grasp.core import osutils as _osu
 from typing import Optional as _Optional, Union as _Union
-from grasp.statistics import regression as _kde_estimator
+from grasp.stats import regression as _kde_estimator
 from grasp.analyzers._Rcode.r2py_models import _kde_labels
 
 label_font = {

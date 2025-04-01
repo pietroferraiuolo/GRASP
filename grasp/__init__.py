@@ -50,7 +50,7 @@ from grasp._utility.base_formula import BaseFormula
 from grasp._utility.cluster import Cluster
 from grasp._utility.sample import Sample
 
-from grasp import statistics
+from grasp import stats
 from grasp import plots
 from grasp.formulary import Formulary, load_base_formulary
 
@@ -94,7 +94,7 @@ __all__ = [
     'Formulary',
     'load_base_formulary',
     'Sample',
-    'statistics',
+    'stats',
     'plots',
     'dr3'
 ]
