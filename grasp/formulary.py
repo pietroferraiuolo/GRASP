@@ -8,24 +8,29 @@ from grasp.core.folder_paths import (
     FORMULARY_BASE_FILE as _fbf,
 )
 
-_str2py = str.maketrans({
-    '-': '',
-    ' ': '_',
-})
+_str2py = str.maketrans(
+    {
+        "-": "",
+        " ": "_",
+    }
+)
 
-_py2str = str.maketrans({
-    '_': ' ',
-})
+_py2str = str.maketrans(
+    {
+        "_": " ",
+    }
+)
 
 _tex2sym = {
     # Basic Operations
     "^": "**",
-    "\\":'', # Remove backslashes
+    "\\": "",  # Remove backslashes
 }
 
-_dummyF = ['f','g','h','k']*50
+_dummyF = ["f", "g", "h", "k"] * 50
 
-class Formulary():
+
+class Formulary:
     """
     The formulary class, which is a collection of equations read from a file,
     or directly instanced in the python session.
@@ -96,8 +101,14 @@ class Formulary():
         else:
             raise AttributeError(f"No '{name}' formula found in the formulary.")
 
-
-    def compute(self, name: str, data: dict, errors: dict = None, corrs: dict = None):
+    def compute(
+        self,
+        name: str,
+        data: dict,
+        errors: dict = None,
+        corrs: dict = None,
+        asarray: bool = False,
+    ):
         """
         Compute numerically a formula, given a set of data for each variable.
 
@@ -154,8 +165,10 @@ class Formulary():
             corr_list = list(corrs.values()) if corrs is not None else None
         else:
             raise ValueError(f"'{name}' not found in the formulary.")
-        return formula.compute(data_list, err_list, corr_list)
-
+        result = formula.compute(data_list, err_list, corr_list)
+        if asarray:
+            result = result.computed_values
+        return result
 
     def substitute(self, name, values):
         """
@@ -187,7 +200,6 @@ class Formulary():
         else:
             raise ValueError(f"'{name}' not found in the formulary.")
 
-
     def add_formula(self, name, formula):
         """
         Add a formula to the formulary.
@@ -201,22 +213,26 @@ class Formulary():
 
         """
         if isinstance(formula, str):
-            if 'Eq(' in formula:
+            if "Eq(" in formula:
                 formula = _symparser.parse_expr(formula)
             else:
                 try:
                     self._latexFormulas[name] = formula
                     l_formula = _latex.parse_latex(formula)
                     s_formula = _symparser.parse_expr(formula)
-                    assert l_formula == s_formula, f"(latex)'{l_formula}' != '{s_formula}'(sympy)"
+                    assert (
+                        l_formula == s_formula
+                    ), f"(latex)'{l_formula}' != '{s_formula}'(sympy)"
                 except Exception as e:
                     if isinstance(e, AssertionError):
-                        print(e) # DEBUG
-                        text = 'Ambiguity in the written formula...\n'
-                        try: # Try to "translate" the formula from latex to sympy
+                        print(e)  # DEBUG
+                        text = "Ambiguity in the written formula...\n"
+                        try:  # Try to "translate" the formula from latex to sympy
                             transl = formula.translate(_tex2sym)
                             l2_formula = _symparser.parse_expr(transl)
-                            assert l2_formula == s_formula, f"Can't translate '{formula}'"
+                            assert (
+                                l2_formula == s_formula
+                            ), f"Can't translate '{formula}'"
                             formula = s_formula
                         except AssertionError as f:
                             print(f)
@@ -225,10 +241,10 @@ class Formulary():
                             s_formula = s_formula.rhs
                         if len(s_formula.free_symbols) >= len(l_formula.free_symbols):
                             formula = s_formula
-                            text += 'Assuming sympy syntax'
+                            text += "Assuming sympy syntax"
                         else:
                             formula = l_formula
-                            text += 'Assuming latex syntax'
+                            text += "Assuming latex syntax"
                         print(text)
                     elif isinstance(e, (SyntaxError, ValueError, TypeError)):
                         formula = l_formula
@@ -241,14 +257,12 @@ class Formulary():
                         raise e
         if not isinstance(formula, _sp.Equality):
             formula = _sp.Eq(
-                _sp.Symbol(f"{_dummyF[self._add_count]}_{self._add_count//4}"),
-                formula
-                )
+                _sp.Symbol(f"{_dummyF[self._add_count]}_{self._add_count//4}"), formula
+            )
             self._add_count += 1
         self.__setitem__(name, formula)
         self.symbols.update(formula.free_symbols)
         self.functions.update(formula.atoms(_sp.Function))
-
 
     def display_all(self):
         """
@@ -261,7 +275,6 @@ class Formulary():
             else:
                 print(f"\n{name}\n{formula}")
 
-
     def show_formula_symbols(self, name: str):
         """
         Show the symbols in a formula.
@@ -270,7 +283,7 @@ class Formulary():
         ----------
         name : str
             The name of the formula.
-        
+
         """
         if name in self.formulas.keys():
             formula = self.formulas[name]
@@ -281,7 +294,6 @@ class Formulary():
             print(f"Symbols in '{name}': {symbols}")
         else:
             raise ValueError(f"'{name}' not found in the formulary.")
-
 
     def load_formulary(self, filename: str):
         """
@@ -320,7 +332,6 @@ class Formulary():
             self.symbols.update(self.formulas[name].free_symbols)
             self.functions.update(self.formulas[name].atoms(_sp.Function))
 
-
     def update_formulary(self):
         """
         Updates the current loaded formulary file with the new formulae defined
@@ -330,7 +341,6 @@ class Formulary():
         if self._file is None:
             raise ValueError("No file to update the formulary from.")
         self.save_formulary(self._file, self._type)
-
 
     def save_formulary(self, filename: str, type: str = "sympy"):
         """
@@ -354,9 +364,10 @@ class Formulary():
             elif type == "latex":
                 if not self._latexFormulas is None:
                     import warnings
+
                     warnings.warn(
-                        "\nOnly the provided LaTeX formulas will be saved, "\
-                            "as sympy expressions can't be converted to LaTeX ones.",
+                        "\nOnly the provided LaTeX formulas will be saved, "
+                        "as sympy expressions can't be converted to LaTeX ones.",
                         UserWarning,
                     )
                     for name, formula in self._latexFormulas.items():
@@ -400,10 +411,9 @@ class _FormulaWrapper(_BaseFormula):
         error propagation formula.
         """
         from grasp.analyzers.calculus import error_propagation
+
         correlation = True if len(self._variables) > 1 else False
-        propagation = error_propagation(
-            self._formula, self._variables, correlation
-        )
+        propagation = error_propagation(self._formula, self._variables, correlation)
         self._errFormula = propagation["error_formula"]
         self._errVariables = propagation["error_variables"]["errors"]
         self._correlations = (
