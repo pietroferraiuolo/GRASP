@@ -12,10 +12,19 @@ class TestGaiaQuery(unittest.TestCase):
         self.assertEqual(self.gaia_query._table, "gaiadr3.gaia_source")
 
     @patch('grasp.gaia.query.GaiaQuery._run_query')
+    def test_free_gc_query(self, mock_run_query):
+        mock_run_query.return_value = MagicMock()
+        cluster = Cluster('ngc104')
+        result = self.gaia_query.free_gc_query(0.1, gc=cluster)
+        self.assertIsNotNone(result)
+        mock_run_query.assert_called_once()
+
+    @patch('grasp.gaia.query.GaiaQuery._run_query')
     def test_free_query(self, mock_run_query):
         mock_run_query.return_value = MagicMock()
         cluster = Cluster('ngc104')
-        result = self.gaia_query.free_query(0.1, gc=cluster)
+        query_cmd = """SELECT * FROM gaiadr3.gaia_source WHERE ra BETWEEN 0 AND 1 AND dec BETWEEN 0 AND 1"""
+        result = self.gaia_query.free_gc_query(query_cmd)
         self.assertIsNotNone(result)
         mock_run_query.assert_called_once()
 
