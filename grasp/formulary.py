@@ -84,6 +84,7 @@ class Formulary:
 
     def __getitem__(self, key):
         """Item Getter"""
+        key = self._check_keys(key)
         return self.formulas[key]
 
     def __setitem__(self, key, value):
@@ -92,14 +93,8 @@ class Formulary:
 
     def __getattr__(self, attr):
         """The attribute getter"""
-        name = attr.translate(_py2str).title()
-        if attr in self.formulas.keys() or name in self.formulas.keys():
-            try:
-                return self.formulas[name]
-            except KeyError:
-                return self.formulas[attr]
-        else:
-            raise AttributeError(f"No '{name}' formula found in the formulary.")
+        name = self._check_keys(attr)
+        return self.formulas[name]
 
     def compute(
         self,
@@ -131,44 +126,56 @@ class Formulary:
             An instance of the individual computed formula.
 
         """
-        if (
-            name or name.lower() or name.replace(" ", "_").lower()
-        ) in self.formulas.keys():
-            formula = (
-                self.formulas[name].rhs
-                if isinstance(self.formulas[name], _sp.Equality)
-                else self.formulas[name]
-            )
-            variables = list(formula.free_symbols)
-            if not all([v.name in data.keys() for v in variables]):
-                raise ValueError("Missing data for some variables in the formula.")
-            if errors is not None:
-                if not all([v.name in errors.keys() for v in variables]):
+        name = self._check_keys(name)
+        formula = (
+            self.formulas[name].rhs
+            if isinstance(self.formulas[name], _sp.Equality)
+            else self.formulas[name]
+        )
+        variables = self._get_ordered_variables(formula)
+        if not all([v.name in data.keys() for v in variables]):
+            raise ValueError("Missing data for some variables in the formula.")
+        if errors is not None:
+            if not all([v.name in errors.keys() for v in variables]):
+                raise ValueError(
+                    "Missing errors for some variables in the formula."
+                )
+            if corrs is not None:
+                if not all(
+                    [
+                        f"{v1.name}_{v2.name}" in corrs.keys()
+                        for v1 in variables
+                        for v2 in variables
+                        if v1 != v2
+                    ]
+                ):
                     raise ValueError(
-                        "Missing errors for some variables in the formula."
+                        "Missing correlations for some variables in the formula."
                     )
-                if corrs is not None:
-                    if not all(
-                        [
-                            f"{v1.name}_{v2.name}" in corrs.keys()
-                            for v1 in variables
-                            for v2 in variables
-                            if v1 != v2
-                        ]
-                    ):
-                        raise ValueError(
-                            "Missing correlations for some variables in the formula."
-                        )
-            formula = _FormulaWrapper(name, formula, variables)
-            data_list = list(data.values())
-            err_list = list(errors.values()) if errors is not None else None
-            corr_list = list(corrs.values()) if corrs is not None else None
-        else:
-            raise ValueError(f"'{name}' not found in the formulary.")
+        formula = _FormulaWrapper(name, formula, variables)
+        data_list = list(data.values())
+        err_list = list(errors.values()) if errors is not None else None
+        corr_list = list(corrs.values()) if corrs is not None else None
         result = formula.compute(data_list, err_list, corr_list)
         if asarray:
             result = result.computed_values
         return result
+    
+    def var_order(self, name: str):
+        """
+        Show the order the variables of a certain formula must have
+        for the numerical computation.
+
+        Parameters
+        ----------
+        name : str
+            The name of the formula.
+        """
+        formula = self._get_formula(name)
+        variables = self._get_ordered_variables(formula)
+        formula = _FormulaWrapper(self._check_keys(name), formula, variables)
+        formula.var_order()
+
 
     def substitute(self, name, values):
         """
@@ -183,22 +190,19 @@ class Formulary:
             {'symbol': value}.
 
         """
-        if (
-            name or name.lower() or name.translate(_str2py).lower()
-        ) in self.formulas.keys():
-            formula = self.formulas[name]
-            for v in values.values():
-                if not isinstance(v, (int, float)):
-                    raise ValueError("Values must be numerical.")
-            if isinstance(formula, _sp.Equality):
-                formula = formula.rhs
-                formula = formula.subs(values)
-                new_formula = _sp.Eq(self.formulas[name].lhs, formula)
-                self.formulas[name] = new_formula
-            else:
-                self.formulas[name] = formula.subs(values)
+        name = self._check_keys(name)
+        formula = self.formulas[name]
+        for v in values.values():
+            if not isinstance(v, (int, float)):
+                raise ValueError("Values must be numerical.")
+        if isinstance(formula, _sp.Equality):
+            formula = formula.rhs
+            formula = formula.subs(values)
+            new_formula = _sp.Eq(self.formulas[name].lhs, formula)
+            self.formulas[name] = new_formula
         else:
-            raise ValueError(f"'{name}' not found in the formulary.")
+            self.formulas[name] = formula.subs(values)
+
 
     def add_formula(self, name, formula):
         """
@@ -264,6 +268,7 @@ class Formulary:
         self.symbols.update(formula.free_symbols)
         self.functions.update(formula.atoms(_sp.Function))
 
+
     def display_all(self):
         """
         Display all formulas in the current formulary instance.
@@ -274,6 +279,7 @@ class Formulary:
                 print(f"\n{name}\n{lhs} = {rhs}")
             else:
                 print(f"\n{name}\n{formula}")
+
 
     def show_formula_symbols(self, name: str):
         """
@@ -294,6 +300,7 @@ class Formulary:
             print(f"Symbols in '{name}': {symbols}")
         else:
             raise ValueError(f"'{name}' not found in the formulary.")
+
 
     def load_formulary(self, filename: str):
         """
@@ -320,7 +327,7 @@ class Formulary:
         for i in range(1, len(content), 2):
             if content[i] in ["\n", ""] or "#" in content[i]:
                 continue
-            name = content[i].strip()
+            name = (content[i].strip()).lower().capitalize()
             formula = content[i + 1].strip()
             if self._type == "latex":
                 self.formulas[name] = _latex.parse_latex(formula)
@@ -332,6 +339,7 @@ class Formulary:
             self.symbols.update(self.formulas[name].free_symbols)
             self.functions.update(self.formulas[name].atoms(_sp.Function))
 
+
     def update_formulary(self):
         """
         Updates the current loaded formulary file with the new formulae defined
@@ -341,6 +349,7 @@ class Formulary:
         if self._file is None:
             raise ValueError("No file to update the formulary from.")
         self.save_formulary(self._file, self._type)
+
 
     def save_formulary(self, filename: str, type: str = "sympy"):
         """
@@ -376,6 +385,74 @@ class Formulary:
                     raise _latex.errors.LaTeXParsingError(
                         "No LaTeX formulas found to save."
                     )
+                
+
+    def _check_keys(self, name):
+        """Check if the keys are valid"""
+        fk = list(self.formulas.keys())
+        fk_lower = [k.lower() for k in fk]
+        fk_l_us = [k.translate(_str2py) for k in fk_lower]
+        fk_l_ns = [k.translate(_py2str) for k in fk_lower]
+        fk_cap = [k.capitalize() for k in fk_lower]
+        fk_tit = [k.title() for k in fk_lower]
+        if name in fk:
+            name = name
+        elif name in fk_lower:
+            name = name.capitalize()
+        elif name in fk_cap:
+            name = name.lower().capitalize()
+        elif name in fk_tit:
+            name = name.lower().capitalize()
+        elif name in fk_l_us:
+            name = name.translate(_py2str).capitalize()     
+        elif name in fk_l_ns:
+            name = name.translate(_py2str).lower().capitalize()
+        else:
+            raise ValueError(f"'{name}' not found in the formulary.")
+        return name
+    
+
+    def _get_ordered_variables(self, formula):
+        """
+        Get the ordered variables in a formula.
+
+        Parameters
+        ----------
+        formula : sympy expression
+            The formula to get the variables from.
+
+        Returns
+        -------
+        variables : list
+            The ordered variables in the formula.
+        """
+        variables = list(formula.free_symbols)
+        variables = sorted(variables, key=lambda x: x.__str__())
+        return variables
+        
+    
+    def _get_formula(self, name):
+        """
+        Get a formula from the formulary.
+
+        Parameters
+        ----------
+        name : str
+            The name of the formula.
+
+        Returns
+        -------
+        formula : sympy expression
+            The formula.
+
+        """
+        name = self._check_keys(name)
+        formula = (
+            self.formulas[name].rhs
+            if isinstance(self.formulas[name], _sp.Equality)
+            else self.formulas[name]
+        )
+        return formula
 
 
 def load_base_formulary():
@@ -419,3 +496,13 @@ class _FormulaWrapper(_BaseFormula):
         self._correlations = (
             propagation["error_variables"]["corrs"] if correlation else None
         )
+
+    def var_order(self):
+        """
+        Returns the order of the variables in the formula.
+        """
+        print(f"""
+`{self._name}' variables must be passed in the following order:
+Data         : {self.variables}
+Errors       : {self.error_variables}
+Correlations : {self.correlations}""")

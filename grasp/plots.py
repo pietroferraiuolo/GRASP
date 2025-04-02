@@ -21,9 +21,9 @@ import numpy as _np
 import seaborn as sns
 import matplotlib.pyplot as _plt
 from grasp.core import osutils as _osu
-from typing import Optional as _Optional, Union as _Union
 from grasp.stats import regression as _kde_estimator
-from grasp.analyzers._Rcode.r2py_models import _kde_labels
+from grasp.analyzers._Rcode.r2py_models import _kde_labels, RegressionModel
+from typing import Optional as _Optional, Union as _Union, Callable as _Callable
 
 label_font = {
     "family": "serif",
@@ -32,6 +32,7 @@ label_font = {
     "size": 15,
 }
 title_font = {
+    "family": "san_serif",
     "style": "italic",
     "color": "black",
     "weight": "semibold",
@@ -104,7 +105,7 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     colorx = kwargs.get("colorx", "green")
     sc = kwargs.get("scatter_color", "black")
     s = _osu.get_kwargs(("size", "s"), 5, kwargs)
-    fsize = kwargs.get("figsize", (5.6,5.2))
+    fsize = kwargs.get("figsize", (5.6, 5.2))
     fig = _plt.figure(figsize=fsize)
     gs = fig.add_gridspec(
         nrows=2,
@@ -121,13 +122,13 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     ax = fig.add_subplot(gs[1, 0])
     ax_histx = fig.add_subplot(gs[0, 0], sharex=ax)
     ax_histy = fig.add_subplot(gs[1, 1], sharey=ax)
-    ax_histx.tick_params(axis="x", labelbottom=False, length=0.)
-    ax_histy.tick_params(axis="y", labelleft=False, length=0.)
+    ax_histx.tick_params(axis="x", labelbottom=False, length=0.0)
+    ax_histy.tick_params(axis="y", labelleft=False, length=0.0)
     # the scatter plot:
     ax.scatter(x, y, color=sc, alpha=alpha, s=s)
     ax.set_xlim(xlim)
     ax.set_ylim(ylim)
-    #ax_histx.set_ylabel("Counts")
+    # ax_histx.set_ylabel("Counts")
     ax_histy.set_xlabel("Counts\n")
     ax.set_xlabel(xlabel, fontdict=label_font)
     ax.set_ylabel(ylabel, fontdict=label_font)
@@ -137,11 +138,11 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     _plt.suptitle(title, size=20, style="italic", family="cursive")
     ax_histx.set_xlim(xlim)
     ax_histy.set_ylim(ylim)
-    ax_histy.xaxis.set_ticks_position('top')
-    ax_histy.xaxis.set_label_position('top')
-    ax_histx.yaxis.set_ticks_position('right')
-    ax_histy.set_xticks(_np.arange(hy[0].max(), hy[0].max()+1, 1))
-    ax_histx.set_yticks(_np.arange(hx[0].max(), hx[0].max()+1, 1))
+    ax_histy.xaxis.set_ticks_position("top")
+    ax_histy.xaxis.set_label_position("top")
+    ax_histx.yaxis.set_ticks_position("right")
+    ax_histy.set_xticks(_np.arange(hy[0].max(), hy[0].max() + 1, 1))
+    ax_histx.set_yticks(_np.arange(hx[0].max(), hx[0].max() + 1, 1))
     if kde:
         reg_x = _kde_estimator(x, kde_kind)
         reg_y = _kde_estimator(y, kde_kind)
@@ -173,7 +174,7 @@ def colorMagnitude(sample=None, g=None, b_r=None, teff_gspphot=None, **kwargs):
         The sample data containing 'phot_g_mean_mag', 'bp_rp' and 'teff_gspphot'
         fields. If no sample is provided, the data fields must be provided.
     g : float | ArrayLike
-        Gaia mean magnitude in the G band. For gaia samples it is the 
+        Gaia mean magnitude in the G band. For gaia samples it is the
         'phot_g_mean_mag' field.
     b_r : float | ArrayLike
         Gaia color, defined as the BP mean magnitude minus the RP mean magnitude.
@@ -185,7 +186,7 @@ def colorMagnitude(sample=None, g=None, b_r=None, teff_gspphot=None, **kwargs):
     ----------------
     **kwargs : dict
         bgc : tuple
-            A tuple with three float values, indicating the RGB gradient which 
+            A tuple with three float values, indicating the RGB gradient which
             define a color (placeholder for the ax.set_facecolor function).
             Aliases: 'bgc', 'bgcolor', 'background_color'.
         alpha : float
@@ -307,7 +308,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
         Option for the computation of the Gaussian Kernel density estimation
         of the histogram. The default is False.
     kde_kind : str, optional
-        Kind of kernel density estimation to be computed. The default is 
+        Kind of kernel density estimation to be computed. The default is
         'gaussian'.
         Options:
             'gaussian'
@@ -362,6 +363,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     title = kwargs.get("title", xlabel + " Distribution")
     fsize = kwargs.get("figsize", default_figure_size)
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
+    scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
             xlim = kwargs["xlim"]
@@ -386,6 +388,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
         _plt.legend(loc="best", fontsize="medium")
     if xlim is not None:
         _plt.xlim(xlim)
+    _plt.yscale(scale)
     _plt.show()
     if out:
         return res
@@ -434,7 +437,7 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     color = _osu.get_kwargs(("c", "color"), "gray", kwargs)
     s = _osu.get_kwargs(("s", "size"), 7.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
-    title = kwargs.get("title", xlabel+' distribution')
+    title = kwargs.get("title", xlabel + " distribution")
     nb2 = int(1.5 * _np.sqrt(len(x)))
     mean_x = _np.mean(x)
     fig, (ax0, ax1) = _plt.subplots(
@@ -576,14 +579,50 @@ def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
     _plt.show()
 
 
-def regressionPlot(regression_model, **kwargs):
+def regressionPlot(
+    regression_model: RegressionModel | str | _Callable,
+    y: _np.ndarray | list = None,
+    x: _np.ndarray | list = None,
+    y_err: _np.ndarray | list = None,
+    type: str = "distribution",
+    **kwargs,
+):
     """
     Plot the regression model with the data and residuals.
 
     Parameters
     ----------
-    regression_model : grasp.r2py_models.RegressionModel
-        The regression model to be plotted.
+    regression_model : grasp.r2py_models.RegressionModel or str or callable
+        The regression model to be plotted. You can either pass the already fitted
+        model or a string indicating the kind of regression to be fitted. The
+        available options are:
+            'gaussian'
+            'exponential'
+            'boltzmann'
+            'king'
+            'rayleigh'
+            'maxwell'
+            'lorentzian'
+            'lognormal'
+            'power'
+            'linear'
+        If you pass a callable, it must be a function that takes the data as
+        input and returns the fitted model. See `grasp.starts.fit_data` documentation
+        for more information.
+    y : ndarray or list, optional
+        If `regression_model` is not passed as a RegressionModel class, and so already
+        fitted, `y` must be provided as the data to be fitted. `regression_model`, then,
+        becomes the kind of regression to be performed.
+    type : str, optional
+        The type of algorithm to use for regression. Options are
+            'distribution': the distribution (histogram) of the data is fitted
+            'datapoint': the data points are fitted
+        Default is 'distribution'.
+    x : ndarray or list, optional
+        The indipendent variable data to be plotted. If not given, it will be
+        simply be an array of the same size as the y data.
+    y_err : ndarray or list, optional
+        The error on the y data.
 
     Other Parameters
     ----------------
@@ -600,7 +639,7 @@ def regressionPlot(regression_model, **kwargs):
             Main plot style. Only works when passing a linear regression
             model. Default is '-' (normal "solid" plot).
         size : int or float
-            Size of the scattered data points in both plots. 
+            Size of the scattered data points in both plots.
             Alias: 's'.
         plot_color : str
             Color of the data plot. Aliases:
@@ -619,8 +658,9 @@ def regressionPlot(regression_model, **kwargs):
             - 'rc'
 
     """
-    rm = regression_model
-    xlim = kwargs.get("xlim", (rm.x.min(), rm.x.max()))
+    rm = _get_regression_model(regression_model, y, x, y_err, type)
+    D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
+    xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
     s = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
     xlabel = kwargs.get("xlabel", "")
@@ -633,11 +673,11 @@ def regressionPlot(regression_model, **kwargs):
     )
     fig.subplots_adjust(hspace=0)
     # data & fit plots
-    if rm.kind=='linear':
-        fmt = kwargs.get('fmt', '-')
-        x = rm.data['x'].to_numpy()
-        y = rm.data['y'].to_numpy()
-        fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label='Data')
+    if rm.kind == "linear":
+        fmt = kwargs.get("fmt", "-")
+        x = rm.data["x"].to_numpy()
+        y = rm.data["y"].to_numpy()
+        fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label="Data")
     else:
         fax.hist(
             rm.data, bins=len(rm.y), color=pc, histtype="step", alpha=0.85, label="Data"
@@ -663,14 +703,14 @@ def regressionPlot(regression_model, **kwargs):
     )
     rax.plot(rm.x, rm.residuals, "o-", c=rc, markersize=s, linewidth=1.0, alpha=0.8)
     fig.suptitle(title, size=20, style="italic", family="cursive")
-    fig.show()
+    _plt.show()
 
 
 def seaborn(type: str, *args, **kwargs):
     """
     Wrapper to make a seaborn plot.
 
-    Check 
+    Check
     <a href="https://seaborn.pydata.org/index.html">seaborn documentation</a>
     for more info on plot types and parameters.
 
@@ -686,3 +726,52 @@ def seaborn(type: str, *args, **kwargs):
     """
     plot_call = getattr(sns, type)
     plot_call(*args, **kwargs)
+
+
+def _get_regression_model(regression_model, y, x, y_err, type):
+    """
+    Get the regression model to be used for the plot.
+
+    This function checks if the regression model is already fitted or if
+    it needs to be fitted with the data. If the regression model is a string,
+    it will be fitted with the data. If the regression model is a callable,
+    it will be used as the fitting function. If the regression model is a
+    RegressionModel instance, it will be used as the regression model.
+    """
+    if isinstance(regression_model, RegressionModel):
+        rm = regression_model
+    elif y is not None:
+        if not regression_model is None:
+            if type == "distribution":
+                model = _kde_estimator(y, regression_model)
+                rm = model
+            elif type == "datapoint":
+                from grasp.stats import fit_data
+                fit = fit_data(y, regression_model, x, y_err)
+                fit['y'] = y
+                fit = __FakeRegModel(fit, regression_model)
+                rm = fit
+        else:
+            raise ValueError(
+                "You must provide the `regression model` argument either as a string, a callable or a grasp.RegressionModel."
+            )
+    else:
+        raise ValueError(
+            "You must either provide a fitted RegressionModel of `y` data to be fitted with the `regression model` argument as a string or a callable."
+        )
+    return rm
+
+
+class __FakeRegModel:
+
+    def __init__(self, fit, kind):
+        if kind == 'linear':
+            self.data = {
+                "x": fit["x"],
+                "y": fit["y"],
+            }
+        self.x = fit["x"]
+        self.y = fit["y_fit"]
+        self.residuals = fit["residuals"]
+        self.kind = kind
+        self.coeffs = fit["parameters"]

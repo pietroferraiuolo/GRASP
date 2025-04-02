@@ -18,10 +18,12 @@ import numpy as _np
 import time as _time
 import pandas as _pd
 import rpy2.robjects as _ro
+from typing import Callable
 from astropy.table import Table as _Table
 from astroML.density_estimation import XDGMM
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
 from grasp.analyzers._Rcode import check_packages as _checkRpackages, r2py_models as _rm
+from scipy.optimize import curve_fit
 from rpy2.robjects import (
     r as _R,
     numpy2ri as _np2r,
@@ -123,9 +125,9 @@ def regression(data, kind="gaussian", verbose: bool = True):
     """
     Regression model estimation function.
 
-    This function fits the input data to an analythical function. The regression model
-    can be of different types, such as linear, or gaussian regression.
-    The function uses the `minpack.lm` R package to fit the model.
+    This function fits the input data **_distribution_** to an analythical function.
+    The regression model can be of different types, such as linear, or gaussian
+    regression. The function uses the `minpack.lm` R package to fit the model.
 
     Parameters
     ----------
@@ -173,6 +175,118 @@ def regression(data, kind="gaussian", verbose: bool = True):
     model = _rm.RegressionModel(regression_model, type=kind)
     _np2r.deactivate()
     return model
+
+
+def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None):
+    """
+    This function fits the imput **data** (not its distribution, see `regression`)
+    to an analythical function.
+
+    It offers several pre-built functions to fit the data, such as:
+    - linear
+    - power
+    - gaussian
+    - poisson
+    - lognormal
+    - exponential
+    - boltzmann
+    - maxwell
+    - lorentzian
+    - rayleigh
+
+    but a custom function can be provided as well.
+
+    **NOTE**: for a custom fitting function to be provided, it must be python-defined
+
+    ```python
+    > grasp.stats.fit_data(x, y, 'exponential')
+    > # The above call is equivalent to doing:
+    > def exponential(x, a, b):
+    >     return a * _np.exp(b * x)
+    > grasp.stats.fit_data(x, y, exponential)
+    ```
+
+    Parameters
+    ----------
+    y_data : numpy.ndarray
+        The y data to be fitted.
+    f : str or function
+        The function to be used for the fitting. If a string, it must be one of the
+        pre-defined functions listed above. If a function, it must be a callable
+        function that takes the x_data as input and returns the y_data (can be
+        a `lambda` function).
+    x_data : numpy.ndarray, optional
+        The indipendent variable data.
+    y_err : numpy.ndarray, optional
+        The errors associated with the y_data. If provided, the fitting will
+        take into account the errors and will return the covariance matrix of
+        the fitted parameters.
+
+    Returns
+    -------
+    fit: dict
+        A dictionary containing the fitted parameters and the covariance matrix:
+    - parameters : numpy.ndarray
+         The optimal values of the parameters for the fitted function.
+    - covariance : numpy.ndarray
+         The covariance matrix of the fitted parameters.
+     
+    """
+    x_data = _np.arange(0.,1.,1/len(y_data)) if x_data is None else x_data
+    f = fit if isinstance(fit, Callable) else _get_function(fit)
+    if not callable(f):
+        raise ValueError(
+            f"The provided function argument `f` must be either a string or a callable: {type(f)}"
+        )
+    if y_err is not None:
+        popt, pcov = curve_fit(f, x_data, y_data, sigma=y_err, absolute_sigma=True)
+    else:
+        popt, pcov = curve_fit(f, x_data, y_data)
+    y_fit = f(x_data, *popt)
+    residuals = y_data - y_fit
+    return {
+        'y_fit': y_fit,
+        'x': x_data,
+        "residuals": residuals,
+        "parameters": popt,
+        "covariance": pcov
+    }
+
+
+def _get_function(name: str):
+    """
+    This function returns the function corresponding to the provided name.
+    The function must be defined in the `grasp.stats` module.
+
+    Parameters
+    ----------
+    name : str
+        The name of the function to be retrieved.
+
+    Returns
+    -------
+    function
+        The function corresponding to the provided name.
+    """
+    
+    exp = _np.exp
+    pi = _np.pi
+    log = _np.log 
+    sqrt = _np.sqrt
+    fact = _np.math.factorial
+    functions = {
+        "linear"      : lambda x, m, q           : m * x + q,
+        "power"       : lambda x, a, b           : a * x**b,
+        "gaussian"    : lambda x, A, mu, sigma   : A * exp(-(x - mu)**2 / (2 * sigma**2)),
+        "boltzmann"   : lambda x, A1, A2, x0, dx : (A1 - A2) / (1 + exp((x - x0) / dx)) + A2,
+        "lognormal"   : lambda x, A, mu, sigma   : A / (x * sigma * sqrt(2 * pi)) * exp(-(log(x) - mu)**2 / (2 * sigma**2)),
+        "exponential" : lambda x, a, l           : a * exp(l * x),
+        "poisson"     : lambda x, A, l           : A * exp(-l) * l**x / fact(x),
+        "maxwell"     : lambda x, a, sigma       : (a / (sigma**3)) * 4 * _np.pi * x**2 * _np.exp(-x**2 / (2 * sigma**2)),
+        "lorentzian"  : lambda x, a, x0, gamma   : a * gamma / (2 * pi) / ((x - x0)**2 + (gamma / 2)**2),
+        "rayleigh"    : lambda x, a, sigma       : (a / (sigma**2)) * x * _np.exp(-x**2 / (2 * sigma**2)),
+    }
+    return functions.get(name)
 
 
 def _data_format_check(data):

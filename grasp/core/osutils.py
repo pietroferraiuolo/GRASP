@@ -49,7 +49,8 @@ def load_data(tn, name: str = None, format="ascii.tab", as_sample: bool = True):
     data = QTable.read(file, format=format)
     if as_sample:
         from grasp._utility.sample import Sample
-        data = Sample(data, gc=tn)
+        gc = file_path.split("/")[-2]
+        data = Sample(data, gc=gc)
     return data
 
 

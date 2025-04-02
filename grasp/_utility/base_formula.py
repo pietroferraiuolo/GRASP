@@ -132,16 +132,6 @@ Correlations: {self._correlations}
                 self._errors = compute_error(
                     self._errFormula, variables, data, errors, corr_values=correlations
                 )
-        print("Data:")
         self._values = compute_numerical_function(self._formula, self._variables, data)
         return self
 
-    # @abstractmethod
-    # def _get_formula(self) -> _sb:
-    #     """Return the derived formula of the class"""
-    #     pass
-
-    # @abstractmethod
-    # def _analitical_formula(self) -> str:
-    #     """Return the analitical formula for the class"""
-    #     pass

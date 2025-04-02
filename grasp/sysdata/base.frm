@@ -1,14 +1,14 @@
 type: latex
 Angular Separation
-\theta_{2D} = 2\times\arcsin{\sqrt{\sin^2{\frac{\delta_0-\delta_1}{2}}+\cos{\delta_0}\cos{\delta_1}\sin^2{\frac{\alpha_0-\alpha_1}{2}}}}
+\theta = 2\times\arcsin{\sqrt{\sin^2{\frac{\delta_0-\delta_1}{2}}+\cos{\delta_0}\cos{\delta_1}\sin^2{\frac{\alpha_0-\alpha_1}{2}}}}
 Los Distance
 r_x = 1/\omega
 Radial Distance 2D
-r_{2d} = r_{gc} \tan{\theta_{2D}}
+r_{2} = r_{c} \tan{\theta}
 Gc Z Coordinate
-d = r_x - r_{gc}
+d = r_x - r_{c}
 Radial Distance 3D
-R = \sqrt{d^2 + r_{2d}^2}
+R = \sqrt{d^2 + r_{2}^2}
 In-Shell Dimentionless Poteff
 \Sigma = \ln{B} - x - \ln{\frac{\Delta_N}{\sqrt{x}}}
 B Constant
