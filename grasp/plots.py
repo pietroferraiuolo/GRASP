@@ -751,7 +751,7 @@ def _get_regression_model(regression_model, y_data, x_data, y_err, type):
     elif y_data is not None:
         if not regression_model is None:
             if type == "distribution":
-                model = _kde_estimator(y_data, regression_model)
+                model = _kde_estimator(y_data, regression_model, verbose=False)
                 rm = model
             elif type == "datapoint":
                 from grasp.stats import fit_data
