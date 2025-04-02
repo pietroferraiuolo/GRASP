@@ -45,7 +45,6 @@ class Sample:
 
     def __init__(self, sample, gc: _Optional[_Union[_Cluster, str]] = None):
         """The constructor"""
-        self.gc = (gc if isinstance(gc, _Cluster) else _Cluster(gc)) if gc else None
         self.qinfo = None
         self._sample = (
             _QTable.from_pandas(sample) if isinstance(sample, _pd.DataFrame) else sample
@@ -53,6 +52,18 @@ class Sample:
         self.__check_simulation()
         self._table = None
         self._bckupSample = self._sample.copy()
+        if isinstance(gc, _Cluster):
+            self.gc = gc
+        elif isinstance(gc, str):
+            if gc == 'UNTRACKEDDATA' or gc == 'UntrackedData':
+                from astropy.units import deg
+                self.gc = _Cluster('UntrackedData')
+                self.gc.ra = self._sample['ra'].mean()*deg
+                self.gc.dec = self._sample['dec'].mean()*deg
+            else:
+                self.gc = _Cluster(gc)
+        else:
+            self.gc = None
 
     def __str__(self):
         """The string representation"""

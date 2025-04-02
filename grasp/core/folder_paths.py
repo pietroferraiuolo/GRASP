@@ -24,7 +24,7 @@ FORMULARY_BASE_FILE     = _os.path.join(SYS_DATA_FOLDER, "base.frm")
 QUERY_DATA_FOLDER       = _os.path.join(BASE_DATA_PATH, "query")
 KING_MODELS_FOLDER      = _os.path.join(BASE_DATA_PATH, "models")
 SIMULATION_FOLDER       = _os.path.join(BASE_DATA_PATH, "simulations")
-UNTRACKED_DATA_FOLDER   = _os.path.join(BASE_DATA_PATH, "UntrackedData")
+UNTRACKED_DATA_FOLDER   = _os.path.join(QUERY_DATA_FOLDER, "UntrackedData")
 
 paths = [
     BASE_DATA_PATH,

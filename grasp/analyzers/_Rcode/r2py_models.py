@@ -209,6 +209,23 @@ f"""----------------------------------------------------------
         return self._model_kind
 
 
+class _FakeRegModel:
+
+    def __init__(self, fit, kind):
+        if kind == 'linear':
+            self.data = {
+                "x": fit["x"],
+                "y": fit["data"],
+            }
+        else:
+            self.data = fit['data']
+        self.x = fit["x"]
+        self.y = fit["y_fit"]
+        self.residuals = fit["residuals"]
+        self.kind = kind
+        self.coeffs = fit["parameters"]
+
+
 def _listvector_to_dict(r_listvector):
     """
     Recursively converts an R ListVector (from rpy2) to a nested Python dictionary.
@@ -238,6 +255,7 @@ def _listvector_to_dict(r_listvector):
         else:
             py_dict[key] = value
     return py_dict
+
 
 def _kde_labels(kind: str, coeffs):
     """

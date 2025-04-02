@@ -59,7 +59,14 @@ class Cluster:
 
     def __init__(self, name: str = None, **params):
         """The constructor"""
-        if name is not None:
+        if name == 'UntrackedData' or name is None:
+            print("Not a Cluster: no model available")
+            self.data_path = UNTRACKED_DATA_FOLDER
+            self.id = "UntrackedData"
+            self.ra = params.get("ra", None)
+            self.dec = params.get("dec", None)
+            self.model = None
+        else:
             self.id = name.upper()
             self.data_path = CLUSTER_DATA_FOLDER(self.id)
             self.model_path = CLUSTER_MODEL_FOLDER(self.id)
@@ -74,13 +81,6 @@ class Cluster:
             self.rt = self.rc * 10**self.logc
             self.cflag = ["True " if parms.loc["collapsed"] == "Y" else False][0]
             self.model = self._load_king_model()
-        else:
-            print("Not a Cluster: no model available")
-            self.data_path = UNTRACKED_DATA_FOLDER
-            self.id = "UntrackedData"
-            self.ra = params.get("ra", None)
-            self.dec = params.get("dec", None)
-            self.model = None
 
     def __str__(self):
         """String representation"""
@@ -89,6 +89,12 @@ class Cluster:
     def __repr__(self):
         """Representation"""
         return self.__get_repr()
+    
+    def __setattr__(self, name, value):
+        """
+        Set the attribute value.
+        """
+        self.__dict__[name] = value
 
     def show_model(self, **kwargs):
         """

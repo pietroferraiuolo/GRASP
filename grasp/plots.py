@@ -22,8 +22,12 @@ import seaborn as sns
 import matplotlib.pyplot as _plt
 from grasp.core import osutils as _osu
 from grasp.stats import regression as _kde_estimator
-from grasp.analyzers._Rcode.r2py_models import _kde_labels, RegressionModel
 from typing import Optional as _Optional, Union as _Union, Callable as _Callable
+from grasp.analyzers._Rcode.r2py_models import (
+    _kde_labels,
+    RegressionModel as _RegressionModel,
+    _FakeRegModel,
+)
 
 label_font = {
     "family": "serif",
@@ -580,9 +584,9 @@ def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
 
 
 def regressionPlot(
-    regression_model: RegressionModel | str | _Callable,
-    y: _np.ndarray | list = None,
-    x: _np.ndarray | list = None,
+    regression_model: _RegressionModel | _FakeRegModel | _Callable | str,
+    y_data: _np.ndarray | list = None,
+    x_data: _np.ndarray | list = None,
     y_err: _np.ndarray | list = None,
     type: str = "distribution",
     **kwargs,
@@ -623,6 +627,10 @@ def regressionPlot(
         simply be an array of the same size as the y data.
     y_err : ndarray or list, optional
         The error on the y data.
+    residuals : ndarray or list, optional
+        The residuals of a performed regression. If this argument is provided,
+        along `x` and `y`, no additional regression will be performed and the
+        passed data will just be plotted.
 
     Other Parameters
     ----------------
@@ -658,7 +666,7 @@ def regressionPlot(
             - 'rc'
 
     """
-    rm = _get_regression_model(regression_model, y, x, y_err, type)
+    rm = _get_regression_model(regression_model, y_data, x_data, y_err, type)
     D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
     xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
     s = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
@@ -728,7 +736,7 @@ def seaborn(type: str, *args, **kwargs):
     plot_call(*args, **kwargs)
 
 
-def _get_regression_model(regression_model, y, x, y_err, type):
+def _get_regression_model(regression_model, y_data, x_data, y_err, type):
     """
     Get the regression model to be used for the plot.
 
@@ -738,18 +746,18 @@ def _get_regression_model(regression_model, y, x, y_err, type):
     it will be used as the fitting function. If the regression model is a
     RegressionModel instance, it will be used as the regression model.
     """
-    if isinstance(regression_model, RegressionModel):
+    if isinstance(regression_model, (_RegressionModel, _FakeRegModel)):
         rm = regression_model
-    elif y is not None:
+    elif y_data is not None:
         if not regression_model is None:
             if type == "distribution":
-                model = _kde_estimator(y, regression_model)
+                model = _kde_estimator(y_data, regression_model)
                 rm = model
             elif type == "datapoint":
                 from grasp.stats import fit_data
-                fit = fit_data(y, regression_model, x, y_err)
-                fit['y'] = y
-                fit = __FakeRegModel(fit, regression_model)
+                fit = fit_data(y_data, fit=regression_model, x_data=x_data, y_err=y_err)
+                fit["data"] = y_data
+                fit = _FakeRegModel(fit, regression_model)
                 rm = fit
         else:
             raise ValueError(
@@ -760,18 +768,3 @@ def _get_regression_model(regression_model, y, x, y_err, type):
             "You must either provide a fitted RegressionModel of `y` data to be fitted with the `regression model` argument as a string or a callable."
         )
     return rm
-
-
-class __FakeRegModel:
-
-    def __init__(self, fit, kind):
-        if kind == 'linear':
-            self.data = {
-                "x": fit["x"],
-                "y": fit["y"],
-            }
-        self.x = fit["x"]
-        self.y = fit["y_fit"]
-        self.residuals = fit["residuals"]
-        self.kind = kind
-        self.coeffs = fit["parameters"]

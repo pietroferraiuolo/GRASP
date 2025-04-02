@@ -78,7 +78,8 @@ from grasp.core.osutils import (
 )
 from grasp.core.folder_paths import (
     BASE_DATA_PATH as _BDP,
-    CLUSTER_DATA_FOLDER as _CDF
+    CLUSTER_DATA_FOLDER as _CDF,
+    UNTRACKED_DATA_FOLDER as _UD,
     )
 
 _QDATA = "query_data.txt"
@@ -571,7 +572,10 @@ Loading it..."""
         """
         config = _cp.ConfigParser()
         tn = _ts()
-        fold = self._checkPathExist(name.upper())
+        if name.upper() == "UNTRACKEDDATA":
+            fold = _UD
+        else:
+            fold = self._checkPathExist(name.upper())
         tnfold = _os.path.join(fold, tn)
         _os.mkdir(tnfold)
         data = _os.path.join(tnfold, _QDATA)

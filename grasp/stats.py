@@ -121,7 +121,7 @@ def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
     return _rm.GMModel(fitted_model, clusters)
 
 
-def regression(data, kind="gaussian", verbose: bool = True):
+def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
     """
     Regression model estimation function.
 
@@ -174,10 +174,13 @@ def regression(data, kind="gaussian", verbose: bool = True):
     regression_model = reg_func(r_data, method=kind, verb=verbose)
     model = _rm.RegressionModel(regression_model, type=kind)
     _np2r.deactivate()
+    if plot:
+        from grasp.plots import regressionPlot
+        regressionPlot(model)
     return model
 
 
-def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None):
+def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: bool = False):
     """
     This function fits the imput **data** (not its distribution, see `regression`)
     to an analythical function.
@@ -232,7 +235,7 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None):
          The covariance matrix of the fitted parameters.
      
     """
-    x_data = _np.arange(0.,1.,1/len(y_data)) if x_data is None else x_data
+    x_data = _np.arange(_np.finfo(_np.float32).eps,1.,1/len(y_data)) if x_data is None else x_data
     f = fit if isinstance(fit, Callable) else _get_function(fit)
     if not callable(f):
         raise ValueError(
@@ -244,13 +247,21 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None):
         popt, pcov = curve_fit(f, x_data, y_data)
     y_fit = f(x_data, *popt)
     residuals = y_data - y_fit
-    return {
-        'y_fit': y_fit,
+    fit = {
+        'data': y_data,
         'x': x_data,
-        "residuals": residuals,
+        'y_fit': y_fit,
         "parameters": popt,
+        "residuals": residuals,
         "covariance": pcov
     }
+    if plot:
+        from grasp.plots import regressionPlot
+        from grasp.analyzers._Rcode.r2py_models import _FakeRegModel
+        kind = fit if isinstance(fit, str) else "custom"
+        model = _FakeRegModel(fit, kind)
+        regressionPlot(model)
+    return fit
 
 
 def _get_function(name: str):
