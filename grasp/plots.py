@@ -13,7 +13,7 @@ How to Use
 Just import the module
 
     >>> from grasp import plots as gplt
-    >>> gplt.scatter_2hist(...) # your data
+    >>> gplt.doubleHistScatter(...) # your data
 
 """
 
@@ -36,7 +36,7 @@ label_font = {
     "size": 15,
 }
 title_font = {
-    "family": "san_serif",
+    "family": "serif",
     "style": "italic",
     "color": "black",
     "weight": "semibold",
@@ -93,6 +93,12 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
             Size of the scattered data points.
         figsize : tuple
             Size of the figure.
+        bins : int
+            Number of bins for the histogram.
+        xlim : tuple
+            Limits for the x-axis.
+        ylim : tuple
+            Limits for the y-axis.
 
     """
     # xmin = _np.nanmin(x)
@@ -110,6 +116,7 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     sc = kwargs.get("scatter_color", "black")
     s = _osu.get_kwargs(("size", "s"), 5, kwargs)
     fsize = kwargs.get("figsize", (5.6, 5.2))
+    bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(x))))
     fig = _plt.figure(figsize=fsize)
     gs = fig.add_gridspec(
         nrows=2,
@@ -136,7 +143,6 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     ax_histy.set_xlabel("Counts\n")
     ax.set_xlabel(xlabel, fontdict=label_font)
     ax.set_ylabel(ylabel, fontdict=label_font)
-    bins = int(1.5 * _np.sqrt(len(x)))
     hx = ax_histx.hist(x, bins=bins, color=colorx, alpha=0.6)
     hy = ax_histy.hist(y, bins=bins, orientation="horizontal", color=colory, alpha=0.6)
     _plt.suptitle(title, size=20, style="italic", family="cursive")
@@ -236,7 +242,7 @@ def properMotion(sample, **kwargs):
     Other Parameters
     ----------------
     **kwargs : additional parameters for customizing the plot.
-        color : str
+        color : str os ArrayLike
             Color of the scattered data points.
         s : int or float
             Size of the scattered data points.
@@ -273,28 +279,44 @@ def spatial(sample, **kwargs):
     Other Parameters
     ----------------
     **kwargs : additional parameters for customizing the plot.
-        color : str
-            Color of the scattered data points.
-        s : int or float
-            Size of the scattered data points.
-        alpha : float
-            Transparency of the scattered data points.
-        figsize : tuple
-            Size of the figure.
+    title : str
+        Title of the plot.
+    color : str os ArrayLike
+        Color of the scattered data points.
+    s : int or float
+        Size of the scattered data points.
+    alpha : float
+        Transparency of the scattered data points.
+    figsize : tuple
+        Size of the figure.
+    colorbar : bool
+        If True, a colorbar will be shown.
+    clabel : str
+        Label for the colorbar. Aliases
+        - 'colorbar_label'
+        - 'cl'
+    cmap : str
+        Matplotlib colormap string for the color-coded points.
 
     """
     col = _osu.get_kwargs(("color", "c"), "black", kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
     size = _osu.get_kwargs(("s", "size"), 5, kwargs)
     alpha = kwargs.get("alpha", 0.5)
+    colorbar = kwargs.get("colorbar", False)
+    clabel = _osu.get_kwargs(('colorbar_label', 'clabel', 'cl'), '', kwargs)
+    cmap = kwargs.get("cmap", "viridis")
+    title = kwargs.get("title", "Spatial Distribution")
     ra = sample["ra"]
     dec = sample["dec"]
     fig, ax = _plt.subplots(figsize=fsize)
     _plt.xlabel(r"$DEC$ [deg]", fontdict=label_font)
     _plt.ylabel(r"$RA$ [deg]", fontdict=label_font)
-    _plt.title("Spatial Distribution", fontdict=title_font)
+    _plt.title(title, fontdict=title_font)
     ax.axis("equal")
-    _plt.scatter(ra, dec, c=col, alpha=alpha, s=size)
+    _plt.scatter(ra, dec, c=col, alpha=alpha, s=size, cmap=cmap)
+    if colorbar:
+        _plt.colorbar(label=clabel)
     _plt.show()
 
 
@@ -323,6 +345,10 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
+        bins : int
+            Number of bins for the histogram.
+        title : str
+            Title of the plot.
         kde_verbose : bool
             If True, the kde iteration will be printed.
         xlabel : str
@@ -337,6 +363,9 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
             Size of the figure.
         xlim : tuple
             Limits for the x-axis.
+        scale : str
+            Scale of the y-axis. Options: 'linear', 'log'.
+            Default is 'linear'.
 
     Returns
     -------
@@ -368,6 +397,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     fsize = kwargs.get("figsize", default_figure_size)
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
+    bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(data))))
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
             xlim = kwargs["xlim"]
