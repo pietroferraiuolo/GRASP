@@ -139,7 +139,8 @@ regression <- function(data, method, verb = FALSE) {
          x = x,
          y = out,
          coeffs = coefficients,
-         residuals = residuals)
+         residuals = residuals,
+         kind = method)
   )
 }
 
@@ -151,6 +152,7 @@ linear_regression <- function(data, method = "linear", verb = FALSE) {
          x = data$x,
          y = fitted(fit),
          coeffs = coef(fit),
-         residuals = resid(fit))
+         residuals = resid(fit),
+         kind = method)
   )
 }

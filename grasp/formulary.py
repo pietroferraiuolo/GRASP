@@ -1,8 +1,15 @@
+"""
+Author(s) 
+---------
+- Pietro Ferraiuolo : written in 2024
+
+Description
+-----------
+"""
 import os as _os
 import sympy as _sp
-from shutil import rmtree as _rm
-from grasp._utility.base_formula import BaseFormula as _BaseFormula
 from sympy.parsing import latex as _latex, sympy_parser as _symparser
+from grasp._utility.base_formula import BaseFormula as _BaseFormula
 from grasp.core.folder_paths import (
     SYS_DATA_FOLDER as _sdf,
     FORMULARY_BASE_FILE as _fbf,
@@ -77,7 +84,7 @@ class Formulary:
     def __str__(self):
         """String representation"""
         text = ""
-        text += f"Available formulas:\n"
+        text += "Available formulas:\n"
         for i, name in enumerate(self.formulas.keys()):
             text += f"\n{i+1}. {name}"
         return text
@@ -95,6 +102,11 @@ class Formulary:
         """The attribute getter"""
         name = self._check_keys(attr)
         return self.formulas[name]
+    
+    @property
+    def formula_names(self):
+        """The formula names"""
+        return list(self.formulas.keys())
 
     def compute(
         self,
@@ -133,26 +145,24 @@ class Formulary:
             else self.formulas[name]
         )
         variables = self._get_ordered_variables(formula)
-        if not all([v.name in data.keys() for v in variables]):
+        if not all(v.name in data.keys() for v in variables):
             raise ValueError("Missing data for some variables in the formula.")
         if errors is not None:
-            if not all([v.name in errors.keys() for v in variables]):
+            if not all(v.name in errors.keys() for v in variables):
                 raise ValueError(
                     "Missing errors for some variables in the formula."
                 )
             if corrs is not None:
                 if not all(
-                    [
                         f"{v1.name}_{v2.name}" in corrs.keys()
                         for v1 in variables
                         for v2 in variables
                         if v1 != v2
-                    ]
                 ):
                     raise ValueError(
                         "Missing correlations for some variables in the formula."
                     )
-        formula = _FormulaWrapper(name, formula, variables)
+        formula = _FormulaWrapper(name.translate(_py2str).capitalize(), formula, variables)
         data_list = list(data.values())
         err_list = list(errors.values()) if errors is not None else None
         corr_list = list(corrs.values()) if corrs is not None else None
@@ -160,7 +170,7 @@ class Formulary:
         if asarray:
             result = result.computed_values
         return result
-    
+
     def var_order(self, name: str):
         """
         Show the order the variables of a certain formula must have
@@ -256,7 +266,7 @@ class Formulary:
                         try:
                             formula = _symparser.parse_expr(formula)
                         except Exception as f:
-                            raise e
+                            raise e from f
                     else:
                         raise e
         if not isinstance(formula, _sp.Equality):
@@ -264,7 +274,7 @@ class Formulary:
                 _sp.Symbol(f"{_dummyF[self._add_count]}_{self._add_count//4}"), formula
             )
             self._add_count += 1
-        self.__setitem__(name, formula)
+        self[name] = formula
         self.symbols.update(formula.free_symbols)
         self.functions.update(formula.atoms(_sp.Function))
 
@@ -321,7 +331,7 @@ class Formulary:
             filename = _os.path.join(_sdf, filename)
         self._file = filename
         self.name = filename.split("/")[-1].split(".")[0]
-        with open(filename, "r") as frm:
+        with open(filename, "r", encoding='utf-8') as frm:
             content = frm.readlines()
         self._type = content[0].split(":")[1].strip()
         for i in range(1, len(content), 2):
@@ -335,7 +345,7 @@ class Formulary:
             elif self._type == "sympy":
                 self.formulas[name] = _symparser.parse_expr(formula)
             else:
-                raise ValueError("Invalid formulary type: '%s'" % self._type)
+                raise ValueError(f"Invalid formulary type: `{self._type}`")
             self.symbols.update(self.formulas[name].free_symbols)
             self.functions.update(self.formulas[name].atoms(_sp.Function))
 
@@ -351,7 +361,7 @@ class Formulary:
         self.save_formulary(self._file, self._type)
 
 
-    def save_formulary(self, filename: str, type: str = "sympy"):
+    def save_formulary(self, filename: str, ftype: str = "sympy"):
         """
         Save the formulary to a file.
 
@@ -365,12 +375,12 @@ class Formulary:
             filename += ".frm"
         if len(filename.split("/")) == 1:
             filename = _os.path.join(_sdf, filename)
-        with open(filename, "w") as frm:
-            frm.write(f"type: {type}\n")
-            if type == "sympy":
+        with open(filename, "w", encoding='utf-8') as frm:
+            frm.write(f"type: {ftype}\n")
+            if ftype == "sympy":
                 for name, formula in self.formulas.items():
                     frm.write(f"{name}\n{str(formula)}\n")
-            elif type == "latex":
+            elif ftype == "latex":
                 if not self._latexFormulas is None:
                     import warnings
 
@@ -385,7 +395,7 @@ class Formulary:
                     raise _latex.errors.LaTeXParsingError(
                         "No LaTeX formulas found to save."
                     )
-                
+
 
     def _check_keys(self, name):
         """Check if the keys are valid"""
@@ -396,7 +406,7 @@ class Formulary:
         fk_cap = [k.capitalize() for k in fk_lower]
         fk_tit = [k.title() for k in fk_lower]
         if name in fk:
-            name = name
+            pass
         elif name in fk_lower:
             name = name.capitalize()
         elif name in fk_cap:
@@ -404,13 +414,13 @@ class Formulary:
         elif name in fk_tit:
             name = name.lower().capitalize()
         elif name in fk_l_us:
-            name = name.translate(_py2str).capitalize()     
+            name = name.translate(_py2str).capitalize()
         elif name in fk_l_ns:
             name = name.translate(_py2str).lower().capitalize()
         else:
             raise ValueError(f"'{name}' not found in the formulary.")
         return name
-    
+
 
     def _get_ordered_variables(self, formula):
         """
@@ -427,10 +437,10 @@ class Formulary:
             The ordered variables in the formula.
         """
         variables = list(formula.free_symbols)
-        variables = sorted(variables, key=lambda x: x.__str__())
+        variables = sorted(variables, key=lambda x: str(x))
         return variables
-        
-    
+
+
     def _get_formula(self, name):
         """
         Get a formula from the formulary.
@@ -489,7 +499,7 @@ class _FormulaWrapper(_BaseFormula):
         """
         from grasp.analyzers.calculus import error_propagation
 
-        correlation = True if len(self._variables) > 1 else False
+        correlation = len(self._variables) > 1
         propagation = error_propagation(self._formula, self._variables, correlation)
         self._errFormula = propagation["error_formula"]
         self._errVariables = propagation["error_variables"]["errors"]

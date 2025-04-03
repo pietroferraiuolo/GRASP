@@ -5,11 +5,11 @@ Author(s)
 
 Description
 -----------
-This module provides a series of functions for the statistical analysis of 
+This module provides a series of functions for the statistical analysis of
 (astronomical) data. The functions are designed to be used in the context of
 the grasp software. The module comes with a related sub-module, `r2py_models.py`,
-which handles the conversion of R objects to Python objects, since the majority 
-of the statistical analysis is done through R scripts. 
+which handles the conversion of R objects to Python objects, since the majority
+of the statistical analysis is done through R scripts.
 
 """
 
@@ -172,7 +172,7 @@ def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
         reg_func = _genv["regression"]
         r_data = _np2r.numpy2rpy(data)
     regression_model = reg_func(r_data, method=kind, verb=verbose)
-    model = _rm.RegressionModel(regression_model, type=kind)
+    model = _rm.RegressionModel(regression_model, kind=kind)
     _np2r.deactivate()
     if plot:
         from grasp.plots import regressionPlot
@@ -227,13 +227,18 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: boo
 
     Returns
     -------
-    fit: dict
+    fitted: dict
         A dictionary containing the fitted parameters and the covariance matrix:
+    - data : numpy.ndarray
+        The original y data.
+    - x : numpy.ndarray
+        The x data used for the fitting. If it has been passed, it's simply
+        `x_data`
     - parameters : numpy.ndarray
          The optimal values of the parameters for the fitted function.
     - covariance : numpy.ndarray
          The covariance matrix of the fitted parameters.
-     
+
     """
     x_data = _np.arange(_np.finfo(_np.float32).eps,1.,1/len(y_data)) if x_data is None else x_data
     f = fit if isinstance(fit, Callable) else _get_function(fit)
@@ -247,7 +252,7 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: boo
         popt, pcov = curve_fit(f, x_data, y_data)
     y_fit = f(x_data, *popt)
     residuals = y_data - y_fit
-    fit = {
+    fitted = {
         'data': y_data,
         'x': x_data,
         'y_fit': y_fit,
@@ -255,13 +260,12 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: boo
         "residuals": residuals,
         "covariance": pcov
     }
+    kind = fit if isinstance(fit, str) else "custom"
+    model = _rm.PyRegressionModel(fitted, kind)
     if plot:
         from grasp.plots import regressionPlot
-        from grasp.analyzers._Rcode.r2py_models import _FakeRegModel
-        kind = fit if isinstance(fit, str) else "custom"
-        model = _FakeRegModel(fit, kind)
         regressionPlot(model)
-    return fit
+    return model
 
 
 def _get_function(name: str):
@@ -279,10 +283,10 @@ def _get_function(name: str):
     function
         The function corresponding to the provided name.
     """
-    
+
     exp = _np.exp
     pi = _np.pi
-    log = _np.log 
+    log = _np.log
     sqrt = _np.sqrt
     fact = _np.math.factorial
     functions = {

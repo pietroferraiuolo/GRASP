@@ -12,10 +12,10 @@ to the model parameters and results.
 """
 
 import numpy as _np
+import joblib
 import rpy2.robjects as _ro
 from rpy2.robjects import (
-    pandas2ri as _pd2r, 
-    #numpy2ri as _np2r,
+    pandas2ri as _pd2r,
     r as _R,
 )
 
@@ -35,12 +35,21 @@ class GMModel:
 
     def __str__(self):
         str_ = \
+f"""
+"""
+        return str_
+    
+    def __repr__(self):
+        repr_ = \
 f"""----------------------------------------------------
-Gaussian finite mixture model fitted by EM algorithm
+Python wrapper for R Mclust's Gaussian Mixture Model
+            fitted by EM algorithm
 ----------------------------------------------------
+.rmodel : R model object as rpy2.robjects
+.model  : R Model translation into py dict
 
 Mclust {self.model['modelName']} model fitted with {self.ndG[2]} components:
-
+-----------------------------------------------------
 log-likelihood : {self.loglik}
 n : {self.ndG[0]}
 df : {self.ndG[1]}
@@ -48,15 +57,6 @@ BIC : {self.bic['BIC']}
 ICL : {self.model['icl']}
 
 Predicted : {self._predicted}
-"""
-        return str_
-    
-    def __repr__(self):
-        repr_ = \
-f"""Python wrapper for R Mclust Gaussian Mixture Model
---------------------------------------------------
-.rmodel : R model object as rpy2.robjects
-.model  : R Model translation into py dict
 
 """
         return repr_
@@ -133,39 +133,84 @@ class RegressionModel:
     Class to convert the R LM Regression Model into a Python dictionary.
     """
 
-    def __init__(self, r_model, type:str='Unknown Model'):
+    def __init__(self, r_model= None, kind:str=''):
         """The Constructor"""
-        self.rmodel = r_model
-        self.model  = _listvector_to_dict(r_model)
-        self._model_kind = type
+        if not r_model is None:
+            self.rmodel = r_model
+            self.model  = _listvector_to_dict(r_model)
+            self._model_kind = kind if kind!='' else self.model['kind']
+        else:
+            self.rmodel = None
+            self.model = None
+            self._model_kind = kind
 
 
     def __repr__(self):
         """The representation of the model."""
-        repr_ = \
+        return f"RegressionModel('{self._model_kind.capitalize()}')"
+    
+
+    def __str__(self):
+        """The string representation of the model."""
+        if self.model is None:
+            return ""
+        txt = _kde_labels(self._model_kind, self.coeffs).splitlines()
+        txt.pop(0)
+        txt = ('\n'.join(txt)).replace('$', '')
+        str_ = \
 f"""----------------------------------------------------
 Python wrapper for R Levenberg-Marquardt Nonlinear 
               Least-Squares Algorithm            
 ----------------------------------------------------
 .rmodel : R model object as rpy2.robjects
-.model  : R Model translation into py dict
+.model  : R Model translation into Py dict
 
-"""
-        return repr_
-    
-    def __str__(self):
-        """The string representation of the model."""
-        txt = _kde_labels(self._model_kind, self.coeffs).splitlines()
-        txt.pop(0)
-        txt = '\n'.join(txt)
-        str_ = \
-f"""----------------------------------------------------------
-{self._model_kind.upper()} Regression Model fitted by LM algorithm
-----------------------------------------------------------
+{self._model_kind.upper()} Regression Model
+----------------------------------------------------
 {txt}
 """
         return str_
     
+    def save_model(self, filename):
+        """
+        Save the R model to a `.rds` file, so it can be loaded both into R, with
+        `model <- readRDS(filename)`, and in python, with 
+        
+        ```python
+        model = grasp.RegressionModel()
+        model.load_model(filename)
+        ```
+        
+        Parameters
+        ----------
+        filename : str
+            The name of the file to save the model to. The extention can be
+            omitted, as it will be attached to then filename
+        """
+        if '.rds' not in filename:
+            filename += '.rds'
+        _ro.r('saveRDS')(self.rmodel, file=filename)
+        print(f"Model saved to {filename}")
+
+
+
+    @classmethod
+    def load_model(cls, filename):
+        """
+        Load the model from a `.gsm` file, so it can be used in Python.
+        
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load the model from. The extention can be
+            omitted, as it will be attached to then filename
+        """
+        if '.rds' not in filename:
+            filename += '.rds'
+        rmodel = _ro.r('readRDS')(filename)
+        return cls(r_model=rmodel)
+
+
     @property
     def coeffs(self):
         """
@@ -209,9 +254,10 @@ f"""----------------------------------------------------------
         return self._model_kind
 
 
-class _FakeRegModel:
+class PyRegressionModel:
 
     def __init__(self, fit, kind):
+        """The Constructor"""
         if kind == 'linear':
             self.data = {
                 "x": fit["x"],
@@ -225,6 +271,11 @@ class _FakeRegModel:
         self.kind = kind
         self.coeffs = fit["parameters"]
 
+
+
+# =============================================================================
+# Support scripts for other functionalities related to R2Py Models
+# =============================================================================
 
 def _listvector_to_dict(r_listvector):
     """
@@ -343,4 +394,9 @@ $\lambda$ = {_format_number(lmbda)}"""
 $A$   = {_format_number(A)}
 $B$   = {_format_number(B)}"""
     
+    elif kind == 'custom':
+        label = "Custom\n" + "\n".join(
+            [f"${chr(65 + i)}$   = {_format_number(param)}" for i, param in enumerate(coeffs)]
+        )
+        
     return label

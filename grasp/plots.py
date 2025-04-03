@@ -26,7 +26,7 @@ from typing import Optional as _Optional, Union as _Union, Callable as _Callable
 from grasp.analyzers._Rcode.r2py_models import (
     _kde_labels,
     RegressionModel as _RegressionModel,
-    _FakeRegModel,
+    PyRegressionModel as _FakeRegModel,
 )
 
 label_font = {
@@ -95,10 +95,10 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
             Size of the figure.
 
     """
-    xmin = _np.nanmin(x)
-    xmax = _np.nanmax(x)
-    ymin = _np.nanmin(y)
-    ymax = _np.nanmax(y)
+    # xmin = _np.nanmin(x)
+    # xmax = _np.nanmax(x)
+    # ymin = _np.nanmin(y)
+    # ymax = _np.nanmax(y)
     title = kwargs.get("title", "")
     xlabel = kwargs.get("xlabel", "")
     ylabel = kwargs.get("ylabel", "")
@@ -383,7 +383,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     _plt.title(title, fontdict=label_font)
     bins = h[1][: len(h[0])]
     counts = h[0]
-    res = {"h": [bins, counts]}
+    res = {"h": {'counts':counts, 'bins': bins}}
     if kde:
         regression = _kde_estimator(data, kde_kind, verbose=verbose)
         res["kde"] = regression.coeffs
@@ -588,7 +588,7 @@ def regressionPlot(
     y_data: _np.ndarray | list = None,
     x_data: _np.ndarray | list = None,
     y_err: _np.ndarray | list = None,
-    type: str = "distribution",
+    f_type: str = "distribution",
     **kwargs,
 ):
     """
@@ -617,7 +617,7 @@ def regressionPlot(
         If `regression_model` is not passed as a RegressionModel class, and so already
         fitted, `y` must be provided as the data to be fitted. `regression_model`, then,
         becomes the kind of regression to be performed.
-    type : str, optional
+    f_type : str, optional
         The type of algorithm to use for regression. Options are
             'distribution': the distribution (histogram) of the data is fitted
             'datapoint': the data points are fitted
@@ -666,7 +666,7 @@ def regressionPlot(
             - 'rc'
 
     """
-    rm = _get_regression_model(regression_model, y_data, x_data, y_err, type)
+    rm = _get_regression_model(regression_model, y_data, x_data, y_err, f_type)
     D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
     xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
     s = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
@@ -676,13 +676,14 @@ def regressionPlot(
     pc = _osu.get_kwargs(("plot_color", "pcolor", "plotcolor", "pc"), "black", kwargs)
     fc = _osu.get_kwargs(("fit_color", "fcolor", "fitcolor", "fc"), "red", kwargs)
     rc = _osu.get_kwargs(("residuals_color", "rcolor", "rescolor", "rc"), "red", kwargs)
+    rfmt = kwargs.get("rfmt", "o-")
+    fmt = kwargs.get("fmt", "--")
     fig, (fax, rax) = _plt.subplots(
         nrows=2, ncols=1, height_ratios=[2.75, 1], figsize=fsize, sharex=True
     )
     fig.subplots_adjust(hspace=0)
     # data & fit plots
     if rm.kind == "linear":
-        fmt = kwargs.get("fmt", "-")
         x = rm.data["x"].to_numpy()
         y = rm.data["y"].to_numpy()
         fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label="Data")
@@ -691,7 +692,7 @@ def regressionPlot(
             rm.data, bins=len(rm.y), color=pc, histtype="step", alpha=0.85, label="Data"
         )
     fax.plot(
-        rm.x, rm.y, c=fc, linestyle="dashed", label=_kde_labels(rm.kind, rm.coeffs)
+        rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs)
     )
     fax.set_ylabel("counts")
     fax.set_xlim(xlim)
@@ -709,12 +710,12 @@ def regressionPlot(
         alpha=0.8,
         linestyle="--",
     )
-    rax.plot(rm.x, rm.residuals, "o-", c=rc, markersize=s, linewidth=1.0, alpha=0.8)
+    rax.plot(rm.x, rm.residuals, rfmt, c=rc, markersize=s, linewidth=1.0, alpha=0.8)
     fig.suptitle(title, size=20, style="italic", family="cursive")
     _plt.show()
 
 
-def seaborn(type: str, *args, **kwargs):
+def seaborn(which: str, *args, **kwargs):
     """
     Wrapper to make a seaborn plot.
 
@@ -724,7 +725,7 @@ def seaborn(type: str, *args, **kwargs):
 
     Parameters
     ----------
-    type : str
+    which : str
         The type of seaborn plot to be made.
 
     Other Parameters
@@ -732,11 +733,11 @@ def seaborn(type: str, *args, **kwargs):
     *args : Additional arguments for the seaborn plot.
     **kwargs : Additional parameters for customizing the plot.
     """
-    plot_call = getattr(sns, type)
+    plot_call = getattr(sns, which)
     plot_call(*args, **kwargs)
 
 
-def _get_regression_model(regression_model, y_data, x_data, y_err, type):
+def _get_regression_model(regression_model, y_data, x_data, y_err, which):
     """
     Get the regression model to be used for the plot.
 
@@ -750,10 +751,10 @@ def _get_regression_model(regression_model, y_data, x_data, y_err, type):
         rm = regression_model
     elif y_data is not None:
         if not regression_model is None:
-            if type == "distribution":
+            if which == "distribution":
                 model = _kde_estimator(y_data, regression_model, verbose=False)
                 rm = model
-            elif type == "datapoint":
+            elif which == "datapoint":
                 from grasp.stats import fit_data
                 fit = fit_data(y_data, fit=regression_model, x_data=x_data, y_err=y_err)
                 fit["data"] = y_data
