@@ -153,8 +153,11 @@ def error_propagation(func, variables, correlation: bool = False) -> _Dict[str, 
             if c != 0:
                 corrs.append(c)
     try:
-        assert len(corrs) % 2 == 0
-        assert len(corrs) != 0
+        assert len(corrs) % 2 == 0, "Correlations must be in pairs"
+        assert len(corrs) != 0, "No correlation, skipping"
+        assert len(corrs) == len(variables)*(len(variables)-1), (
+            "Correlations not matching the number of variables"
+        )
         for i in range(0, len(corrs), 2):
             eformula = _sp.nsimplify(error_formula.subs(corrs[i + 1], corrs[i]))
             corrs.pop(i + 1)

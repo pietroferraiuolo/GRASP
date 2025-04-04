@@ -397,6 +397,8 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     fsize = kwargs.get("figsize", default_figure_size)
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
+    if scale == 'log':
+        xlabel = "log() " + xlabel + " )"
     bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(data))))
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
@@ -409,6 +411,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     _plt.figure(figsize=fsize)
     h = _plt.hist(data, bins=n_bin, color=hcolor, alpha=alpha)
     _plt.ylabel("counts")
+    _plt.yscale(scale)
     _plt.xlabel(xlabel, fontdict=label_font)
     _plt.title(title, fontdict=label_font)
     bins = h[1][: len(h[0])]
@@ -422,7 +425,6 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
         _plt.legend(loc="best", fontsize="medium")
     if xlim is not None:
         _plt.xlim(xlim)
-    _plt.yscale(scale)
     _plt.show()
     if out:
         return res

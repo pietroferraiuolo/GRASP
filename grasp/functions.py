@@ -450,7 +450,7 @@ class CartesianConversion:
     :math:`r = \sqrt{x^2 + y^2}`.
     """
 
-    def __init__(self, ra0=0, dec0=0):
+    def __init__(self, ra0 = None, dec0 = None, propagate_error: bool = True):
         """The constructor"""
         super().__init__()
         self._values = None
@@ -459,126 +459,191 @@ class CartesianConversion:
         self._errFormula = None
         self._errVariables = None
         self._corVariables = None
-        self.ra0 = ra0
-        self.dec0 = dec0
-        self._get_formula()
+        self.ra0 = ra0 if ra0 is not None else _sp.symbols("alpha_0")
+        self.dec0 = dec0 if dec0 is not None else _sp.symbols("delta_0")
+        self._get_formula(propagate_error)
 
     @property
     def x(self):
         """
         Return the x component of the cartesian conversion.
         """
-        return self._values[0]
+        if self._values is None or self._values[0] is None:
+            res = self._formula[0]
+        else:
+            res = self._values[0]
+        return res
 
     @property
     def x_error(self):
         """
         Return the error of the x component of the cartesian conversion.
         """
-        return self._errFormula[0]["error_formula"]
+        if self._errFormula is None or self._errFormula[0].get("error_formula") is None:
+            res = self._formula[0]
+        else:
+            res = self._errFormula[0]["error_formula"]
+        return res
 
     @property
     def y(self):
         """
         Return the y component of the cartesian conversion.
         """
-        return self._values[1]
+        if self._values is None or self._values[1] is None:
+            res = self._formula[1]
+        else:
+            res = self._values[1]
+        return res
 
     @property
     def y_error(self):
         """
         Return the error of the y component of the cartesian conversion.
         """
-        return self._errFormula[1]["error_formula"]
+        if self._errFormula is None or self._errFormula[1].get("error_formula") is None:
+            res = self._formula[1]
+        else:
+            res = self._errFormula[1]["error_formula"]
+        return res
 
     @property
     def r(self):
         """
         Return the r component of the cartesian conversion.
         """
-        return self._values[2]
+        if self._values is None or self._values[2] is None:
+            res = self._formula[2]
+        else:
+            res = self._values[2]
+        return res
 
     @property
     def r_error(self):
         """
         Return the error of the r component of the cartesian conversion.
         """
-        return self._errFormula[2]["error_formula"]
+        if self._errFormula is None or self._errFormula[2].get("error_formula") is None:
+            res = self._formula[2]
+        else:
+            res = self._errFormula[2]["error_formula"]
+        return res
 
     @property
     def theta(self):
         """
         Return the theta component of the cartesian conversion.
         """
-        return self._values[3]
+        if self._values is None or self._values[3] is None:
+            res = self._formula[3]
+        else:
+            res = self._values[3]
+        return res
 
     @property
     def theta_error(self):
         """
         Return the error of the theta component of the cartesian conversion.
         """
-        return self._errFormula[3]["error_formula"]
+        if self._errFormula is None or self._errFormula[3].get("error_formula") is None:
+            res = self._formula[3]
+        else:
+            res = self._errFormula[3]["error_formula"]
+        return res
 
     @property
     def mu_x(self):
         """
         Return the mu_x component of the cartesian conversion.
         """
-        return self._values[4]
+        if self._values is None or self._values[4] is None:
+            res = self._formula[4]
+        else:
+            res = self._values[4]
+        return res
 
     @property
     def mux_error(self):
         """
         Return the error of the mu_x component of the cartesian conversion.
         """
-        return self._errFormula[4]["error_formula"]
+        if self._errFormula is None or self._errFormula[4].get("error_formula") is None:
+            res = self._formula[4]
+        else:
+            res = self._errFormula[4]["error_formula"]
+        return res
 
     @property
     def mu_y(self):
         """
         Return the mu_y component of the cartesian conversion.
         """
-        return self._values[5]
+        if self._values is None or self._values[5] is None:
+            res = self._formula[5]
+        else:
+            res = self._values[5]
+        return res
 
     @property
     def muy_error(self):
         """
         Return the error of the mu_y component of the cartesian conversion.
         """
-        return self._errFormula[5]["error_formula"]
+        if self._errFormula is None or self._errFormula[5].get("error_formula") is None:
+            res = self._formula[5]
+        else:
+            res = self._errFormula[5]["error_formula"]
+        return res
 
     @property
     def mu_r(self):
         """
         Return the mu_r component of the cartesian conversion.
         """
-        return self._values[6]
+        if self._values is None or self._values[6] is None:
+            res = self._formula[6]
+        else:
+            res = self._values[6]
+        return res
 
     @property
     def mur_error(self):
         """
         Return the error of the mu_r component of the cartesian conversion.
         """
-        return self._errFormula[6]["error_formula"]
+        if self._errFormula is None or self._errFormula[6].get("error_formula") is None:
+            res = self._formula[6]
+        else:
+            res = self._errFormula[6]["error_formula"]
+        return res
 
     @property
     def mu_theta(self):
         """
         Return the mu_theta component of the cartesian conversion.
         """
-        return self._values[7]
+        if self._values is None or self._values[7] is None:
+            res = self._formula[7]
+        else:
+            res = self._values[7]
+        return res
 
     @property
     def mutheta_error(self):
         """
         Return the error of the mu_theta component of the cartesian conversion.
         """
-        return self._errFormula[7]["error_formula"]
+        if self._errFormula is None or self._errFormula[7].get("error_formula") is None:
+            res = self._formula[7]
+        else:
+            res = self._errFormula[7]["error_formula"]
+        return res
 
-    def _get_formula(self):
+
+    def _get_formula(self, propagate_error: bool = True):
         """Analytical formula getter for the cartesian conversion"""
-        ra, dec = _sp.symbols("alpha \delta")
-        pmra, pmdec = _sp.symbols("mu_{\\alpha} mu_{\delta}")
+        ra, dec = _sp.symbols("alpha delta")
+        pmra, pmdec = _sp.symbols("mu_alpha mu_delta")
         variables = [ra, dec, pmra, pmdec]
         # cartesian spatial coordinates
         x = _sp.sin(ra - self.ra0) * _sp.cos(self.dec0)
@@ -597,11 +662,27 @@ class CartesianConversion:
             + _sp.sin(dec) * _sp.sin(self.dec0) * _sp.cos(ra - self.ra0)
         )
         # polar velocity components
-        mu_r = (x * mu_x + y * mu_y) / _sp.sqrt(x**2 + y**2)
-        mu_theta = (y * mu_x - x * mu_y) / (x**2 + y**2)
+        mu_r = (x * mu_x + y * mu_y) / r
+        mu_theta = (y * mu_x - x * mu_y) / (r**2)
         self._formula = [x, y, r, theta, mu_x, mu_y, mu_r, mu_theta]
         self._variables = variables
-        # Errors computation
+        if propagate_error:
+            self.error_propagation()
+        return self
+    
+    def error_propagation(self):
+        """
+        Compute the error propagation for the cartesian conversion.
+
+        Returns
+        -------
+        self
+            The cartesian conversion errors, stored in the .errFormula method as
+            a pandas DataFrame.
+        """
+        ra, dec = _sp.symbols("alpha delta")
+        pmra, pmdec = _sp.symbols("mu_alpha mu_delta")
+        x, y, r, theta, mu_x, mu_y, mu_r, mu_theta = self._formula
         xerr = _error_propagation(x, [ra, dec], correlation=True)
         yerr = _error_propagation(y, [ra, dec], correlation=True)
         rerr = _error_propagation(r, [ra, dec], correlation=True)
@@ -628,7 +709,6 @@ class CartesianConversion:
         self._corVariables = (
             rerr["error_variables"]["corrs"] + murerr["error_variables"]["corrs"]
         )
-        return self
 
     def compute(
         self,
