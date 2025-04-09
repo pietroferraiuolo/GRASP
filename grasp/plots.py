@@ -617,9 +617,8 @@ def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
 
 def regressionPlot(
     regression_model: _RegressionModel | _FakeRegModel | _Callable | str,
-    y_data: _np.ndarray | list = None,
     x_data: _np.ndarray | list = None,
-    y_err: _np.ndarray | list = None,
+    y_data: _np.ndarray | list = None,
     f_type: str = "distribution",
     **kwargs,
 ):
@@ -645,6 +644,9 @@ def regressionPlot(
         If you pass a callable, it must be a function that takes the data as
         input and returns the fitted model. See `grasp.starts.fit_data` documentation
         for more information.
+    x : ndarray or list, optional
+        The indipendent variable data to be plotted. If not given, it will be
+        simply be an array of the same size as the y data.
     y : ndarray or list, optional
         If `regression_model` is not passed as a RegressionModel class, and so already
         fitted, `y` must be provided as the data to be fitted. `regression_model`, then,
@@ -654,15 +656,6 @@ def regressionPlot(
             'distribution': the distribution (histogram) of the data is fitted
             'datapoint': the data points are fitted
         Default is 'distribution'.
-    x : ndarray or list, optional
-        The indipendent variable data to be plotted. If not given, it will be
-        simply be an array of the same size as the y data.
-    y_err : ndarray or list, optional
-        The error on the y data.
-    residuals : ndarray or list, optional
-        The residuals of a performed regression. If this argument is provided,
-        along `x` and `y`, no additional regression will be performed and the
-        passed data will just be plotted.
 
     Other Parameters
     ----------------
@@ -698,7 +691,7 @@ def regressionPlot(
             - 'rc'
 
     """
-    rm = _get_regression_model(regression_model, y_data, x_data, y_err, f_type)
+    rm = _get_regression_model(regression_model, y_data, x_data, f_type)
     D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
     xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
     s = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
@@ -714,22 +707,39 @@ def regressionPlot(
         nrows=2, ncols=1, height_ratios=[2.75, 1], figsize=fsize, sharex=True
     )
     fig.subplots_adjust(hspace=0)
-    # data & fit plots
-    if rm.kind == "linear":
+    # ---------------
+    # data plot (with conditions)
+    # ---------------
+    if isinstance(rm, _RegressionModel) and rm.kind == "linear":
         x = rm.data["x"].to_numpy()
         y = rm.data["y"].to_numpy()
         fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label="Data")
+    elif f_type == 'datapoint':
+        fax.scatter(
+            rm.x,
+            rm.data,
+            c=pc,
+            s=s,
+            linewidth=1.0,
+            alpha=0.8,
+            label="Data",
+        )
     else:
         fax.hist(
             rm.data, bins=len(rm.y), color=pc, histtype="step", alpha=0.85, label="Data"
         )
+    # ---------------
+    # fit plot in red color (default)
+    # ---------------
     fax.plot(
         rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs)
     )
     fax.set_ylabel("counts")
     fax.set_xlim(xlim)
     fax.legend(loc="best", fontsize="medium")
-    # residuals plot
+    # --------------
+    # Residuals plot
+    # --------------
     rax.set_ylabel("Residuals")
     rax.yaxis.set_label_position("left")
     rax.yaxis.tick_right()
@@ -769,7 +779,7 @@ def seaborn(which: str, *args, **kwargs):
     plot_call(*args, **kwargs)
 
 
-def _get_regression_model(regression_model, y_data, x_data, y_err, which):
+def _get_regression_model(regression_model, y_data, x_data, which):
     """
     Get the regression model to be used for the plot.
 
@@ -788,7 +798,7 @@ def _get_regression_model(regression_model, y_data, x_data, y_err, which):
                 rm = model
             elif which == "datapoint":
                 from grasp.stats import fit_data
-                fit = fit_data(y_data, fit=regression_model, x_data=x_data, y_err=y_err)
+                fit = fit_data(x_data, y_data, fit=regression_model)
                 fit["data"] = y_data
                 fit = _FakeRegModel(fit, regression_model)
                 rm = fit

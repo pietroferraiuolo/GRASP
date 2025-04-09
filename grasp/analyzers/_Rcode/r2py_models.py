@@ -407,6 +407,13 @@ $\lambda$ = {_format_number(lmbda)}"""
 $A$   = {_format_number(A)}
 $B$   = {_format_number(B)}"""
     
+    elif 'polynomial' in kind:
+        degree = int(kind[0])
+        label = f"Polynomial of degree {degree}\n"+\
+        "\n".join(
+            [f"${chr(65 + i)}$   = {_format_number(param)}" for i, param in enumerate(coeffs)]
+        )
+
     elif kind == 'custom':
         label = "Custom\n" + "\n".join(
             [f"${chr(65 + i)}$   = {_format_number(param)}" for i, param in enumerate(coeffs)]
