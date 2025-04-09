@@ -14,7 +14,7 @@ try:
     BASE_DATA_PATH      = _os.path.join(_os.environ['GRASPDATA'])
 except KeyError:
     print("No GRASPDATA environment variable found. Using the HOME folder.")
-    BASE_DATA_PATH      = _os.path.join(_os.environ['HOME'], 'graspdata')
+    BASE_DATA_PATH      = _os.path.join(_os.path.expanduser('~'), 'graspdata')
 SYS_DATA_FOLDER         = _os.path.join(BASE_PATH, "sysdata")
 CATALOG_FILE            = _os.path.join(BASE_PATH, 'sysdata', "_Catalogue.xlsx")
 KING_INTEGRATOR_FOLDER  = _os.path.join(BASE_PATH, "analyzers", "_king")

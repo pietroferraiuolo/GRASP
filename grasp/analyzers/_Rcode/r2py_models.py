@@ -12,7 +12,6 @@ to the model parameters and results.
 """
 
 import numpy as _np
-import joblib
 import rpy2.robjects as _ro
 from rpy2.robjects import (
     pandas2ri as _pd2r,
@@ -193,11 +192,10 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
         print(f"Model saved to {filename}")
 
 
-
     @classmethod
     def load_model(cls, filename):
         """
-        Load the model from a `.gsm` file, so it can be used in Python.
+        Load the model from a `.rds` file, so it can be used in Python.
         
         Parameters
         ----------
@@ -255,7 +253,9 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
 
 
 class PyRegressionModel:
-
+    """
+    Native Python regression model class for the GRASP package.
+    """
     def __init__(self, fit, kind):
         """The Constructor"""
         if kind == 'linear':
@@ -270,7 +270,18 @@ class PyRegressionModel:
         self.residuals = fit["residuals"]
         self.kind = kind
         self.coeffs = fit["parameters"]
+        self.covariance_matrix = fit["covmat"]
 
+    def __repr__(self):
+        """The representation of the model."""
+        return f"RegressionModel('{self.kind.capitalize()}')"
+    
+    def __str__(self):
+        """The string representation of the model.""" 
+        return f"""{self.kind.upper()} Regression Model
+--------------------------------------
+Coefficients:
+{[f"${chr(65 + i)}$ = {_format_number(param)}" for i, param in enumerate(self.coeffs)]}"""
 
 
 # =============================================================================
@@ -308,19 +319,21 @@ def _listvector_to_dict(r_listvector):
     return py_dict
 
 
+def _format_number(num):
+    """
+    Format the number using scientific notation if it is too large or too
+    small.
+    """
+    if abs(num) < 1e-3 or abs(num) > 1e3:
+        return f"{num:.2e}"
+    else:
+        return f"{num:.3f}"
+
+
 def _kde_labels(kind: str, coeffs):
     """
     Return the labels for the KDE plot.
     """
-    def _format_number(num):
-        """
-        Format the number using scientific notation if it is too large or too
-        small.
-        """
-        if abs(num) < 1e-3 or abs(num) > 1e3:
-            return f"{num:.2e}"
-        else:
-            return f"{num:.2f}"
     
     if kind == 'gaussian':
         A, mu, sigma2 = coeffs

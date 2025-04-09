@@ -180,13 +180,14 @@ def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
     return model
 
 
-def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: bool = False):
+def fit_data(x_data = None, y_data = None, fit: str | Callable = 'linear', plot: bool = False, *curvefit_args):
     """
     This function fits the imput **data** (not its distribution, see `regression`)
     to an analythical function.
 
     It offers several pre-built functions to fit the data, such as:
     - linear
+    - polyN (where N is the degree of the polynomial)
     - power
     - gaussian
     - poisson
@@ -211,54 +212,142 @@ def fit_data(y_data, fit: str | Callable, x_data = None, y_err = None, plot: boo
 
     Parameters
     ----------
+    x_data : numpy.ndarray, optional
+        The indipendent variable data.
     y_data : numpy.ndarray
         The y data to be fitted.
-    f : str or function
+    fit : str or function
         The function to be used for the fitting. If a string, it must be one of the
         pre-defined functions listed above. If a function, it must be a callable
         function that takes the x_data as input and returns the y_data (can be
         a `lambda` function).
-    x_data : numpy.ndarray, optional
-        The indipendent variable data.
-    y_err : numpy.ndarray, optional
-        The errors associated with the y_data. If provided, the fitting will
-        take into account the errors and will return the covariance matrix of
-        the fitted parameters.
+    plot : bool, optional
+        If True, plot the fitted data.
 
+    Additional Parameters
+    ---------------------
+    *curvefit_args : additional parameters of the scipy.optimize.curve_fit function.
+
+    p0 : array_like, optional
+        Initial guess for the parameters (length N). If None, then the
+        initial values will all be 1 (if the number of parameters for the
+        function can be determined using introspection, otherwise a
+        ValueError is raised).
+
+    sigma : None or scalar or M-length sequence or MxM array, optional
+        Determines the uncertainty in `ydata`. If we define residuals as
+        ``r = ydata - f(xdata, *popt)``, then the interpretation of `sigma`
+        depends on its number of dimensions:
+
+            - A scalar or 1-D `sigma` should contain values of standard deviations of
+              errors in `ydata`. In this case, the optimized function is
+              ``chisq = sum((r / sigma) ** 2)``.
+
+            - A 2-D `sigma` should contain the covariance matrix of
+              errors in `ydata`. In this case, the optimized function is
+              ``chisq = r.T @ inv(sigma) @ r``.
+
+        None (default) is equivalent of 1-D `sigma` filled with ones.
+
+    absolute_sigma : bool, optional
+        If True, `sigma` is used in an absolute sense and the estimated parameter
+        covariance `pcov` reflects these absolute values.
+
+        If False (default), only the relative magnitudes of the `sigma` values matter.
+        The returned parameter covariance matrix `pcov` is based on scaling
+        `sigma` by a constant factor. This constant is set by demanding that the
+        reduced `chisq` for the optimal parameters `popt` when using the
+        *scaled* `sigma` equals unity. In other words, `sigma` is scaled to
+        match the sample variance of the residuals after the fit. Default is False.
+        Mathematically,
+        ``pcov(absolute_sigma=False) = pcov(absolute_sigma=True) * chisq(popt)/(M-N)``
+
+    check_finite : bool, optional
+        If True, check that the input arrays do not contain nans of infs,
+        and raise a ValueError if they do. Setting this parameter to
+        False may silently produce nonsensical results if the input arrays
+        do contain nans. Default is True if `nan_policy` is not specified
+        explicitly and False otherwise.
+
+    bounds : 2-tuple of array_like or `Bounds`, optional
+        Lower and upper bounds on parameters. Defaults to no bounds.
+        There are two ways to specify the bounds:
+
+            - Instance of `Bounds` class.
+
+            - 2-tuple of array_like: Each element of the tuple must be either
+              an array with the length equal to the number of parameters, or a
+              scalar (in which case the bound is taken to be the same for all
+              parameters). Use ``np.inf`` with an appropriate sign to disable
+              bounds on all or some parameters.
+
+    method : {'lm', 'trf', 'dogbox'}, optional
+        Method to use for optimization. See `least_squares` for more details.
+        Default is 'lm' for unconstrained problems and 'trf' if `bounds` are
+        provided. The method 'lm' won't work when the number of observations
+        is less than the number of variables, use 'trf' or 'dogbox' in this
+        case.
+
+    jac : callable, string or None, optional
+        Function with signature ``jac(x, ...)`` which computes the Jacobian
+        matrix of the model function with respect to parameters as a dense
+        array_like structure. It will be scaled according to provided `sigma`.
+        If None (default), the Jacobian will be estimated numerically.
+        String keywords for 'trf' and 'dogbox' methods can be used to select
+        a finite difference scheme, see `least_squares`.
+
+    nan_policy : {'raise', 'omit', None}, optional
+        Defines how to handle when input contains nan.
+        The following options are available (default is None):
+
+          * 'raise': throws an error
+          * 'omit': performs the calculations ignoring nan values
+          * None: no special handling of NaNs is performed
+            (except what is done by check_finite); the behavior when NaNs
+            are present is implementation-dependent and may change.
+
+        Note that if this value is specified explicitly (not None),
+        `check_finite` will be set as False.
+
+    
     Returns
     -------
-    fitted: dict
-        A dictionary containing the fitted parameters and the covariance matrix:
-    - data : numpy.ndarray
-        The original y data.
-    - x : numpy.ndarray
-        The x data used for the fitting. If it has been passed, it's simply
-        `x_data`
-    - parameters : numpy.ndarray
-         The optimal values of the parameters for the fitted function.
-    - covariance : numpy.ndarray
-         The covariance matrix of the fitted parameters.
+    fitted: PyRegressionModel
+        The fitted model as a PyRegressionModel object. The object contains the following attributes:
+        - data: the fitted data
+        - x: the x data
+        - y_fit: the fitted y data
+        - parameters: the fitted parameters
+        - residuals: the residuals of the fit
+        - covariance: the covariance matrix of the fitted parameters
+        - kind: the type of fit 
 
     """
+    if y_data is None:
+        fitted = {
+            'data': None,
+            'x': None,
+            'y_fit': None,
+            "parameters": None,
+            "residuals": None,
+            "covmat": None
+        }
+        return _rm.PyRegressionModel(fitted, "")
     x_data = _np.arange(_np.finfo(_np.float32).eps,1.,1/len(y_data)) if x_data is None else x_data
     f = fit if isinstance(fit, Callable) else _get_function(fit)
     if not callable(f):
         raise ValueError(
             f"The provided function argument `f` must be either a string or a callable: {type(f)}"
         )
-    if y_err is not None:
-        popt, pcov = curve_fit(f, x_data, y_data, sigma=y_err, absolute_sigma=True)
-    else:
-        popt, pcov = curve_fit(f, x_data, y_data)
+    popt, pcov, infodict, _, _ = curve_fit(f, x_data, y_data, *curvefit_args, full_output=True)
     y_fit = f(x_data, *popt)
-    residuals = y_data - y_fit
     fitted = {
         'data': y_data,
         'x': x_data,
         'y_fit': y_fit,
         "parameters": popt,
-        "residuals": residuals,
-        "covariance": pcov
+        "residuals": infodict['fvec'],
+        "covmat": pcov,
     }
     kind = fit if isinstance(fit, str) else "custom"
     model = _rm.PyRegressionModel(fitted, kind)
