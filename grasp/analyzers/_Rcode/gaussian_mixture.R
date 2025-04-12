@@ -1,6 +1,6 @@
 library(mclust)
 
-GaussianMixtureModel <- function(
+GMMTrainAndFit <- function(
   train_data,
   fit_data,
   n_clusters = 2,
@@ -23,7 +23,7 @@ GaussianMixtureModel <- function(
   return(list(model = model, cluster = cluster))
 }
 
-GM_model <- function(
+GaussianMixtureModel <- function(
   train_data,
   n_clusters = 2,
   model_name = "VII",
@@ -42,4 +42,13 @@ GM_model <- function(
                   verbose = verbose)
   # Return the model and its parameters
   return(model)
+}
+
+GMMPredict <- function(
+  model,
+  fit_data
+) {
+  # Predict the cluster membership probabilities
+  cluster <- predict.Mclust(model, fit_data)
+  return(cluster)
 }

@@ -304,7 +304,7 @@ def spatial(sample, **kwargs):
     size = _osu.get_kwargs(("s", "size"), 5, kwargs)
     alpha = kwargs.get("alpha", 0.5)
     colorbar = kwargs.get("colorbar", False)
-    clabel = _osu.get_kwargs(('colorbar_label', 'clabel', 'cl'), '', kwargs)
+    clabel = _osu.get_kwargs(("colorbar_label", "clabel", "cl"), "", kwargs)
     cmap = kwargs.get("cmap", "viridis")
     title = kwargs.get("title", "Spatial Distribution")
     ra = sample["ra"]
@@ -397,7 +397,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     fsize = kwargs.get("figsize", default_figure_size)
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
-    if scale == 'log':
+    if scale == "log":
         xlabel = "log() " + xlabel + " )"
     bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(data))))
     if "xlim" in kwargs:
@@ -416,7 +416,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     _plt.title(title, fontdict=label_font)
     bins = h[1][: len(h[0])]
     counts = h[0]
-    res = {"h": {'counts':counts, 'bins': bins}}
+    res = {"h": {"counts": counts, "bins": bins}}
     if kde:
         regression = _kde_estimator(data, kde_kind, verbose=verbose)
         res["kde"] = regression.coeffs
@@ -714,7 +714,7 @@ def regressionPlot(
         x = rm.data["x"].to_numpy()
         y = rm.data["y"].to_numpy()
         fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label="Data")
-    elif f_type == 'datapoint':
+    elif f_type == "datapoint":
         fax.scatter(
             rm.x,
             rm.data,
@@ -731,9 +731,7 @@ def regressionPlot(
     # ---------------
     # fit plot in red color (default)
     # ---------------
-    fax.plot(
-        rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs)
-    )
+    fax.plot(rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs))
     fax.set_ylabel("counts")
     fax.set_xlim(xlim)
     fax.legend(loc="best", fontsize="medium")
@@ -798,6 +796,7 @@ def _get_regression_model(regression_model, y_data, x_data, which):
                 rm = model
             elif which == "datapoint":
                 from grasp.stats import fit_data
+
                 fit = fit_data(x_data, y_data, fit=regression_model)
                 fit["data"] = y_data
                 fit = _FakeRegModel(fit, regression_model)

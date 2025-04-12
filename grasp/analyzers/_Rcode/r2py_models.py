@@ -15,6 +15,9 @@ import numpy as _np
 import rpy2.robjects as _ro
 from rpy2.robjects import (
     pandas2ri as _pd2r,
+    numpy2ri as _np2r,
+    #rinterface as _ri,
+    globalenv as _genv,
     r as _R,
 )
 
@@ -25,7 +28,7 @@ class GMModel:
     dictionary.
     """
 
-    def __init__(self, r_model, predictions=None):
+    def __init__(self, r_model, predictions = None):
         """The Constructor"""
         self.rmodel         = r_model
         self.model          = _listvector_to_dict(r_model)
@@ -95,8 +98,8 @@ Predicted : {self._predicted}
     def train_classification(self):
         """
         Array containing in order:
-            z: the membership probability of each data point to each component
-            classification: the classification of the data points
+        - z : the membership probability of each data point to each component
+        - classification : the classification of the data points
         """
         return _np.array([self.model["z"], self.model["classification"]])
 
@@ -125,6 +128,71 @@ Predicted : {self._predicted}
         The uncertainty of the model for each data point membership probability.
         """
         return self.model["uncertainty"]
+
+
+    def predict(self, data):
+        """
+        Predict the membership probability of each data point to each component.
+
+        Parameters
+        ----------
+        data : array-like, shape (n_samples, n_features)
+            The data to predict the membership probability for.
+        
+        Returns
+        -------
+        array-like, shape (n_samples, n_components)
+            The predicted membership probability for each data point.
+        """
+        import os
+        from .r_check import _checkRpackages
+        from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
+        _checkRpackages("mclust")
+        _np2r.activate()
+        code = os.path.join(_RSF, "gaussian_mixture.R")
+        _R(f'source("{code}")')
+        rdata = _np2r.py2rpy(data)
+        result = _genv['GMMPredict'](self.rmodel, rdata)
+        self.classification = _listvector_to_dict(result)
+        self._predicted = True
+        return self.classification
+    
+    def save_model(self, filename):
+        """
+        Save the R model to a `.rds` file, so it can be loaded both into R, with
+        `model <- readRDS(filename)`, and in python, with 
+        
+        ```python
+        model = grasp.RegressionModel()
+        model.load_model(filename)
+        ```
+        
+        Parameters
+        ----------
+        filename : str
+            The name of the file to save the model to. The extention can be
+            omitted, as it will be attached to then filename
+        """
+        if '.rds' not in filename:
+            filename += '.rds'
+        _ro.r('saveRDS')(self.rmodel, file=filename)
+        print(f"Model saved to {filename}")
+
+    @classmethod
+    def load_model(cls, filename):
+        """
+        Load the model from a `.rds` file, so it can be used in Python.
+        
+        Parameters
+        ----------
+        filename : str
+            The name of the file to load the model from. The extention can be
+            omitted, as it will be attached to then filename
+        """
+        if '.rds' not in filename:
+            filename += '.rds'
+        rmodel = _ro.r('readRDS')(filename)
+        return cls(r_model=rmodel)
 
 
 class RegressionModel:

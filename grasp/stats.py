@@ -28,7 +28,7 @@ from rpy2.robjects import (
     r as _R,
     numpy2ri as _np2r,
     pandas2ri as _pd2r,
-    globalenv as _genv
+    globalenv as _genv,
 )
 
 
@@ -105,7 +105,7 @@ def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
         # Convert kwargs to R list
         r_kwargs = _ro.vectors.ListVector(kwargs)
         # Call the R function with the data and additional arguments
-        fitted_model = _genv["GaussianMixtureModel"](
+        fitted_model = _genv["GMMTrainAndFit"](
             r_data, r_fit_data, **dict(r_kwargs.items())
         )
         clusters = fitted_model.rx2("cluster")
@@ -115,13 +115,13 @@ def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
         # Convert kwargs to R list
         r_kwargs = _ro.vectors.ListVector(kwargs)
         # Call the R function with the data and additional arguments
-        fitted_model = _genv["GM_model"](r_data, **dict(r_kwargs.items()))
+        fitted_model = _genv["GaussianMixtureModel"](r_data, **dict(r_kwargs.items()))
         clusters = None
     _np2r.deactivate()
     return _rm.GMModel(fitted_model, clusters)
 
 
-def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
+def regression(data: list | _np.ndarray, kind: str ="gaussian", verbose: bool = True, plot: bool = False):
     """
     Regression model estimation function.
 
@@ -158,14 +158,14 @@ def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
     _np2r.activate()
     regression_code = _os.path.join(_RSF, "regression.R")
     _R(f'source("{regression_code}")')
-    if kind=='linear':
+    if kind == "linear":
         _pd2r.activate()
         reg_func = _genv["linear_regression"]
         D = _np.array(data).shape[-1] if isinstance(data, list) else data.shape[-1]
         if D != 2:
-            x = list(_np.arange(0.,1.,1/len(data)))
+            x = list(_np.arange(0.0, 1.0, 1 / len(data)))
             y = list(data)
-            data = _pd.DataFrame({'x': x, 'y': y})
+            data = _pd.DataFrame({"x": x, "y": y})
         r_data = _pd2r.py2rpy_pandasdataframe(data)
         _pd2r.deactivate()
     else:
@@ -176,11 +176,18 @@ def regression(data, kind="gaussian", verbose: bool = True, plot: bool = False):
     _np2r.deactivate()
     if plot:
         from grasp.plots import regressionPlot
+
         regressionPlot(model)
     return model
 
 
-def fit_data(x_data = None, y_data = None, fit: str | Callable = 'linear', plot: bool = False, *curvefit_args):
+def fit_data(
+    x_data: list | _np.ndarray = None,
+    y_data: list | _np.ndarray = None,
+    fit: str | Callable = "linear",
+    plot: bool = False,
+    *curvefit_args,
+) -> _rm.PyRegressionModel:
     """
     This function fits the imput **data** (not its distribution, see `regression`)
     to an analythical function.
@@ -206,8 +213,10 @@ def fit_data(x_data = None, y_data = None, fit: str | Callable = 'linear', plot:
     > grasp.stats.fit_data(x, y, 'exponential')
     > # The above call is equivalent to doing:
     > def exponential(x, a, b):
-    >     return a * _np.exp(b * x)
+    >     return a * np.exp(b * x)
     > grasp.stats.fit_data(x, y, exponential)
+    > # or, equivalently
+    > grasp.stats.fit_data(x, y, lambda x, a, b: a * np.exp(b * x))
     ```
 
     Parameters
@@ -226,48 +235,55 @@ def fit_data(x_data = None, y_data = None, fit: str | Callable = 'linear', plot:
 
     Additional Parameters
     ---------------------
-    *curvefit_args : additional parameters of the scipy.optimize.curve_fit function.<br>
-    **NOTE**: they don't work if the fitting method is `polyN`, as it uses numpy
-    `polyfit` and `polyval` functions. See <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html">scipy</a>
-    documentation for more details.
-    
+    *curvefit_args : additional parameters of the `scipy.optimize.curve_fit` function (See 
+    <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html">scipy</a>
+    documentation for more details).<br>
+    **NOTE**: The `curvefit_args` won't work if the fitting method is `polyN`, as this
+    function uses the numpy `polyfit` and `polyval` functions to perform the fitting
+    on the data.
+
     Returns
     -------
     fitted: PyRegressionModel
         The fitted model as a PyRegressionModel object. The object contains the following attributes:
-        - data: the fitted data
-        - x: the x data
-        - y_fit: the fitted y data
-        - parameters: the fitted parameters
-        - residuals: the residuals of the fit
+        - data: the original data to be fitted
+        - x: the indipendent variable data
+        - y_fit: the result fitted y data
+        - parameters: the coefficients of the fitted function
+        - residuals: the residuals of the fit1
         - covariance: the covariance matrix of the fitted parameters
-        - kind: the type of fit 
+        - kind: the type of fit performed (e.g. linear, gaussian, etc.)
 
     """
     if y_data is None:
         fitted = {
-            'data': None,
-            'x': None,
-            'y_fit': None,
+            "data": None,
+            "x": None,
+            "y_fit": None,
             "parameters": None,
             "residuals": None,
-            "covmat": None
+            "covmat": None,
         }
         return _rm.PyRegressionModel(fitted, "")
-    x_data = _np.arange(_np.finfo(_np.float32).eps,1.,1/len(y_data)) if x_data is None else x_data
-    if 'poly' in fit:
+    x_data = (
+        _np.arange(_np.finfo(_np.float32).eps, 1.0, 1 / len(y_data))
+        if x_data is None
+        else x_data
+    )
+    if "poly" in fit:
         from numpy import polyfit, polyval
+
         degree = int(fit[-1])
-        coeffs= polyfit(x_data, y_data, degree)
+        coeffs = polyfit(x_data, y_data, degree)
         y_fit = polyval(coeffs, x_data)
         residuals = y_data - y_fit
         fitted = {
-            'data': y_data,
-            'x': x_data,
-            'y_fit': y_fit,
+            "data": y_data,
+            "x": x_data,
+            "y_fit": y_fit,
             "parameters": coeffs,
             "residuals": residuals,
-            "covmat": 'unavailable',
+            "covmat": "unavailable",
         }
         model = _rm.PyRegressionModel(fitted, f"{degree}-degree polynomial")
     else:
@@ -276,20 +292,23 @@ def fit_data(x_data = None, y_data = None, fit: str | Callable = 'linear', plot:
             raise ValueError(
                 f"The provided function argument `f` must be either a string or a callable: {type(f)}"
             )
-        popt, pcov, infodict, _, _ = curve_fit(f, x_data, y_data, *curvefit_args, full_output=True)
+        popt, pcov, infodict, _, _ = curve_fit(
+            f, x_data, y_data, *curvefit_args, full_output=True
+        )
         y_fit = f(x_data, *popt)
         fitted = {
-            'data': y_data,
-            'x': x_data,
-            'y_fit': y_fit,
+            "data": y_data,
+            "x": x_data,
+            "y_fit": y_fit,
             "parameters": popt,
-            "residuals": infodict['fvec'],
+            "residuals": infodict["fvec"],
             "covmat": pcov,
         }
         kind = fit if isinstance(fit, str) else "custom"
         model = _rm.PyRegressionModel(fitted, kind)
     if plot:
         from grasp.plots import regressionPlot
+
         regressionPlot(model)
     return model
 
@@ -316,16 +335,28 @@ def _get_function(name: str):
     sqrt = _np.sqrt
     fact = _np.math.factorial
     functions = {
-        "linear"      : lambda x, m, q           : m * x + q,
-        "power"       : lambda x, a, b           : a * x**b,
-        "gaussian"    : lambda x, A, mu, sigma   : A * exp(-(x - mu)**2 / (2 * sigma**2)),
-        "boltzmann"   : lambda x, A1, A2, x0, dx : (A1 - A2) / (1 + exp((x - x0) / dx)) + A2,
-        "lognormal"   : lambda x, A, mu, sigma   : A / (x * sigma * sqrt(2 * pi)) * exp(-(log(x) - mu)**2 / (2 * sigma**2)),
-        "exponential" : lambda x, a, l           : a * exp(l * x),
-        "poisson"     : lambda x, A, l           : A * exp(-l) * l**x / fact(x),
-        "maxwell"     : lambda x, a, sigma       : (a / (sigma**3)) * 4 * _np.pi * x**2 * _np.exp(-x**2 / (2 * sigma**2)),
-        "lorentzian"  : lambda x, a, x0, gamma   : a * gamma / (2 * pi) / ((x - x0)**2 + (gamma / 2)**2),
-        "rayleigh"    : lambda x, a, sigma       : (a / (sigma**2)) * x * _np.exp(-x**2 / (2 * sigma**2)),
+        "linear": lambda x, m, q: m * x + q,
+        "power": lambda x, a, b: a * x**b,
+        "gaussian": lambda x, A, mu, sigma: A * exp(-((x - mu) ** 2) / (2 * sigma**2)),
+        "boltzmann": lambda x, A1, A2, x0, dx: (A1 - A2) / (1 + exp((x - x0) / dx))
+        + A2,
+        "lognormal": lambda x, A, mu, sigma: A
+        / (x * sigma * sqrt(2 * pi))
+        * exp(-((log(x) - mu) ** 2) / (2 * sigma**2)),
+        "exponential": lambda x, a, l: a * exp(l * x),
+        "poisson": lambda x, A, l: A * exp(-l) * l**x / fact(x),
+        "maxwell": lambda x, a, sigma: (a / (sigma**3))
+        * 4
+        * _np.pi
+        * x**2
+        * _np.exp(-(x**2) / (2 * sigma**2)),
+        "lorentzian": lambda x, a, x0, gamma: a
+        * gamma
+        / (2 * pi)
+        / ((x - x0) ** 2 + (gamma / 2) ** 2),
+        "rayleigh": lambda x, a, sigma: (a / (sigma**2))
+        * x
+        * _np.exp(-(x**2) / (2 * sigma**2)),
     }
     return functions.get(name)
 
