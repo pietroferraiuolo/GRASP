@@ -21,7 +21,7 @@ import numpy as _np
 import seaborn as sns
 import matplotlib.pyplot as _plt
 from grasp.core import osutils as _osu
-from grasp.stats import regression as _kde_estimator
+from grasp.stats import fit_distribution as _kde_estimator
 from typing import Optional as _Optional, Union as _Union, Callable as _Callable
 from grasp.analyzers._Rcode.r2py_models import (
     _kde_labels,
@@ -37,7 +37,7 @@ label_font = {
 }
 title_font = {
     "family": "serif",
-    "style": "italic",
+    #"style": "italic",
     "color": "black",
     "weight": "semibold",
     "size": 20,
@@ -792,13 +792,11 @@ def _get_regression_model(regression_model, y_data, x_data, which):
     elif y_data is not None:
         if not regression_model is None:
             if which == "distribution":
-                model = _kde_estimator(y_data, regression_model, verbose=False)
+                model = _kde_estimator(y_data, method=regression_model, verbose=False)
                 rm = model
             elif which == "datapoint":
-                from grasp.stats import fit_data
-
-                fit = fit_data(x_data, y_data, fit=regression_model)
-                fit["data"] = y_data
+                from grasp.stats import fit_data_points
+                fit = fit_data_points(data=y_data, x_data=x_data, method=regression_model)
                 fit = _FakeRegModel(fit, regression_model)
                 rm = fit
         else:

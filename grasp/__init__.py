@@ -45,7 +45,7 @@ from grasp.gaia._zero_point import zero_point_correction
 from grasp.gaia.query import GaiaQuery, available_tables
 from grasp.analyzers.mcluster import mcluster_run, docs as mcluster_docs
 from grasp.analyzers import calculus
-from grasp.analyzers._Rcode.r2py_models import RegressionModel, GMModel, PyRegressionModel
+from grasp.analyzers._Rcode.r2py_models import RegressionModel, GaussianMixtureModel, PyRegressionModel
 from grasp._utility.base_formula import BaseFormula
 from grasp._utility.cluster import Cluster, available_clusters
 from grasp._utility.sample import Sample
@@ -88,7 +88,7 @@ __all__ = [
     'mcluster_run',
     'calculus',
     'RegressionModel',
-    'GMModel',
+    'GaussianMixtureModel',
     'BaseFormula',
     'Cluster',
     'Formulary',

@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from grasp import plots as gplt
-from grasp.stats import regression
+from grasp.stats import fit_distribution as regression
 
 
 class TestPlots(unittest.TestCase):

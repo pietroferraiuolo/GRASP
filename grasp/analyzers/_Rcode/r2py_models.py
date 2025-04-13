@@ -22,7 +22,7 @@ from rpy2.robjects import (
 )
 
 
-class GMModel:
+class GaussianMixtureModel:
     """
     Class to convert the R Mclust Gaussian Mixture Model into a Python 
     dictionary.
@@ -35,20 +35,17 @@ class GMModel:
         self.classification = predictions
         self._predicted     = False if predictions is None else True
 
+    def __repr__(self):
+        return "GaussianMixtureModel()"
+    
     def __str__(self):
         str_ = \
-f"""
-"""
-        return str_
-    
-    def __repr__(self):
-        repr_ = \
 f"""----------------------------------------------------
 Python wrapper for R Mclust's Gaussian Mixture Model
             fitted by EM algorithm
 ----------------------------------------------------
 .rmodel : R model object as rpy2.robjects
-.model  : R Model translation into py dict
+.model  : R Model translation into Py dict
 
 Mclust {self.model['modelName']} model fitted with {self.ndG[2]} components:
 -----------------------------------------------------
@@ -61,7 +58,7 @@ ICL : {self.model['icl']}
 Predicted : {self._predicted}
 
 """
-        return repr_
+        return str_
 
     @property
     def data(self):
@@ -349,7 +346,7 @@ class PyRegressionModel:
         return f"""{self.kind.upper()} Regression Model
 --------------------------------------
 Coefficients:
-{[f"${chr(65 + i)}$ = {_format_number(param)}" for i, param in enumerate(self.coeffs)]}"""
+{'\n'.join([f"{chr(65 + i)} = {_format_number(param)}" for i, param in enumerate(self.coeffs)])}"""
 
 
 # =============================================================================

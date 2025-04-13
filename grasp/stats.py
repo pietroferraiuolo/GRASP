@@ -72,7 +72,11 @@ def XD_estimator(data, errors, correlations=None, *xdargs):
     return model
 
 
-def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
+def gaussian_mixture_model(
+    train_data: list[float] | _np.ndarray,
+    fit_data: list[float] | _np.ndarray = None,
+    **kwargs,
+) -> _rm.GaussianMixtureModel:
     """
     Gaussian Mixture Estimation function.
 
@@ -83,8 +87,11 @@ def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
 
     Parameters
     ----------
-    data : numpy.ndarray
-        The data to be fitted with a gaussian mixture model.
+    trin_data : numpy.ndarray
+        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
+    fit_data : numpy.ndarray, optional
+        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
+        If provided, the fitted model will perform predictions to this data.
     **kwargs : optional
         Additional keyword arguments for the R GM_model function. See
         <a href="https://cran.r-project.org/web/packages/mclust/mclust.pdf">
@@ -118,10 +125,87 @@ def gaussian_mixture_model(train_data, fit_data=None, **kwargs):
         fitted_model = _genv["GaussianMixtureModel"](r_data, **dict(r_kwargs.items()))
         clusters = None
     _np2r.deactivate()
-    return _rm.GMModel(fitted_model, clusters)
+    return _rm.GaussianMixtureModel(fitted_model, clusters)
 
 
-def regression(data: list | _np.ndarray, kind: str ="gaussian", verbose: bool = True, plot: bool = False):
+def fit(
+    data: list | _np.ndarray,
+    method: str | Callable = "gaussian",
+    fit_type: str = "distribution",
+    **kwargs
+) -> _rm.RegressionModel | _rm.PyRegressionModel:
+    """
+    General fitting function that combines distribution fitting and raw data fitting.
+
+    For in depth information on the fitting methods, please refer to the
+    `fit_distribution` and `fit_data_points` functions.
+    This function allows you to choose between fitting the distribution of the data
+    or fitting the raw data points. The fitting method is determined by the `fit_type`
+    parameter. The function will call the appropriate fitting function based on the
+    specified `fit_type`.
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        The data to be analyzed.
+    method : str or function
+        The type of regression model to be fitted. If passed as str, options are:<br>
+        - "linear",
+        - "power",
+        - "gaussian",
+        - "poisson",
+        - "lognormal",
+        - "exponential",
+        - "boltzmann",
+        - "king",
+        - "maxwell",
+        - "lorentzian",
+        - "rayleigh",
+
+        Only for the `datapoint`, a custom fitting function can be passed as a 
+        callable. Also, the fitting type:<br>
+        - "polyN" (where N is the degree of the polynomial)
+
+        is added to the list of available options.<br>
+        If a custom fitting function is passed, it must be a callable function
+        of the form:
+        ```python
+        def custom_function(x, *params):
+            # Your custom fitting function here
+            return y
+        ```
+        where `x` is the independent variable data and `params` are the parameters
+        to be fitted. The function should return the dependent variable data.
+        The function can also be a `lambda` function.
+    fit_type : str, optional
+        The type of fitting to perform. Options are:
+        - "distribution": Fits the data's distribution, performing a KDE 
+            (calls `fit_distribution`).
+        - "datapoint": Fits the data points (calls `fit_points`).
+    **kwargs : optional
+        Additional arguments passed to the respective fitting functions.
+        Check the documentation of `fit_distribution` and `fit_data_points`
+        for more information on the available arguments.
+
+    Returns
+    -------
+    model : RegressionModel or PyRegressionModel
+        The fitted model.
+    """
+    if fit_type == "distribution":
+        return fit_distribution(data=data, method=method, **kwargs)
+    elif fit_type == "datapoint":
+        return fit_data_points(data=data, method=method, **kwargs)
+    else:
+        raise ValueError(f"Invalid fit_type: {fit_type}. Choose 'distribution' or 'datapoint'.")
+
+
+def fit_distribution(
+    data: list | _np.ndarray,
+    method: str = "gaussian",
+    verbose: bool = True,
+    plot: bool = False,
+) -> _rm.RegressionModel:
     """
     Regression model estimation function.
 
@@ -133,7 +217,7 @@ def regression(data: list | _np.ndarray, kind: str ="gaussian", verbose: bool = 
     ----------
     data : numpy.ndarray
         The data to be analyzed.
-    kind : str, optional
+    method : str, optional
         The type of regression model to be fitted. Options are:
         - "linear",
         - "power",
@@ -158,7 +242,7 @@ def regression(data: list | _np.ndarray, kind: str ="gaussian", verbose: bool = 
     _np2r.activate()
     regression_code = _os.path.join(_RSF, "regression.R")
     _R(f'source("{regression_code}")')
-    if kind == "linear":
+    if method == "linear":
         _pd2r.activate()
         reg_func = _genv["linear_regression"]
         D = _np.array(data).shape[-1] if isinstance(data, list) else data.shape[-1]
@@ -171,20 +255,19 @@ def regression(data: list | _np.ndarray, kind: str ="gaussian", verbose: bool = 
     else:
         reg_func = _genv["regression"]
         r_data = _np2r.numpy2rpy(data)
-    regression_model = reg_func(r_data, method=kind, verb=verbose)
-    model = _rm.RegressionModel(regression_model, kind=kind)
+    regression_model = reg_func(r_data, method=method, verb=verbose)
+    model = _rm.RegressionModel(regression_model, kind=method)
     _np2r.deactivate()
     if plot:
         from grasp.plots import regressionPlot
-
         regressionPlot(model)
     return model
 
 
-def fit_data(
+def fit_data_points(
+    data: list | _np.ndarray = None,
     x_data: list | _np.ndarray = None,
-    y_data: list | _np.ndarray = None,
-    fit: str | Callable = "linear",
+    method: str | Callable = "linear",
     plot: bool = False,
     *curvefit_args,
 ) -> _rm.PyRegressionModel:
@@ -221,11 +304,11 @@ def fit_data(
 
     Parameters
     ----------
+    data : numpy.ndarray
+        The y data to be fitted.
     x_data : numpy.ndarray, optional
         The indipendent variable data.
-    y_data : numpy.ndarray
-        The y data to be fitted.
-    fit : str or function
+    method : str or function
         The function to be used for the fitting. If a string, it must be one of the
         pre-defined functions listed above. If a function, it must be a callable
         function that takes the x_data as input and returns the y_data (can be
@@ -235,7 +318,7 @@ def fit_data(
 
     Additional Parameters
     ---------------------
-    *curvefit_args : additional parameters of the `scipy.optimize.curve_fit` function (See 
+    *curvefit_args : additional parameters of the `scipy.optimize.curve_fit` function (See
     <a href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.curve_fit.html">scipy</a>
     documentation for more details).<br>
     **NOTE**: The `curvefit_args` won't work if the fitting method is `polyN`, as this
@@ -255,7 +338,8 @@ def fit_data(
         - kind: the type of fit performed (e.g. linear, gaussian, etc.)
 
     """
-    if y_data is None:
+    method_is_str = isinstance(method, str)
+    if data is None:
         fitted = {
             "data": None,
             "x": None,
@@ -266,19 +350,21 @@ def fit_data(
         }
         return _rm.PyRegressionModel(fitted, "")
     x_data = (
-        _np.arange(_np.finfo(_np.float32).eps, 1.0, 1 / len(y_data))
+        _np.arange(_np.finfo(_np.float32).eps, 1.0, 1 / len(data))
         if x_data is None
         else x_data
     )
-    if "poly" in fit:
+    if method_is_str and "poly" in method:
         from numpy import polyfit, polyval
-
-        degree = int(fit[-1])
-        coeffs = polyfit(x_data, y_data, degree)
+        try:
+            degree = int(method[-2:])
+        except ValueError:
+            degree = int(method[-1])
+        coeffs = polyfit(x_data, data, degree)
         y_fit = polyval(coeffs, x_data)
-        residuals = y_data - y_fit
+        residuals = data - y_fit
         fitted = {
-            "data": y_data,
+            "data": data,
             "x": x_data,
             "y_fit": y_fit,
             "parameters": coeffs,
@@ -287,29 +373,28 @@ def fit_data(
         }
         model = _rm.PyRegressionModel(fitted, f"{degree}-degree polynomial")
     else:
-        f = fit if isinstance(fit, Callable) else _get_function(fit)
+        f = method if isinstance(method, Callable) else _get_function(method)
         if not callable(f):
             raise ValueError(
                 f"The provided function argument `f` must be either a string or a callable: {type(f)}"
             )
         popt, pcov, infodict, _, _ = curve_fit(
-            f, x_data, y_data, *curvefit_args, full_output=True
+            f, x_data, data, *curvefit_args, full_output=True
         )
         y_fit = f(x_data, *popt)
         fitted = {
-            "data": y_data,
+            "data": data,
             "x": x_data,
             "y_fit": y_fit,
             "parameters": popt,
             "residuals": infodict["fvec"],
             "covmat": pcov,
         }
-        kind = fit if isinstance(fit, str) else "custom"
+        kind = method if method_is_str else "custom"
         model = _rm.PyRegressionModel(fitted, kind)
     if plot:
         from grasp.plots import regressionPlot
-
-        regressionPlot(model)
+        regressionPlot(model, f_type="datapoint")
     return model
 
 
