@@ -32,7 +32,7 @@ class GaussianMixtureModel:
         """The Constructor"""
         self.rmodel         = r_model
         self.model          = _listvector_to_dict(r_model)
-        self.classification = predictions
+        self.classification = _listvector_to_dict(predictions) if predictions is not None else None
         self._predicted     = False if predictions is None else True
 
     def __repr__(self):
@@ -98,7 +98,7 @@ Predicted : {self._predicted}
         - z : the membership probability of each data point to each component
         - classification : the classification of the data points
         """
-        return _np.array([self.model["z"], self.model["classification"]])
+        return {'z': self.model["z"], 'classification': self.model["classification"]}
 
     @property
     def parameters(self):
@@ -142,9 +142,9 @@ Predicted : {self._predicted}
             The predicted membership probability for each data point.
         """
         import os
-        from .r_check import _checkRpackages
+        from .r_check import check_packages
         from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
-        _checkRpackages("mclust")
+        check_packages("mclust")
         _np2r.activate()
         code = os.path.join(_RSF, "gaussian_mixture.R")
         _R(f'source("{code}")')
