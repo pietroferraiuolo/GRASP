@@ -343,10 +343,12 @@ class PyRegressionModel:
     
     def __str__(self):
         """The string representation of the model.""" 
-        return f"""{self.kind.upper()} Regression Model
+        base_txt = f"""{self.kind.upper()} Regression Model
 --------------------------------------
 Coefficients:
-{'\n'.join([f"{chr(65 + i)} = {_format_number(param)}" for i, param in enumerate(self.coeffs)])}"""
+"""
+        coeff_txt = "\n".join([f"{chr(65 + i)} = {_format_number(param)}" for i, param in enumerate(self.coeffs)])
+        return base_txt + coeff_txt
 
 
 # =============================================================================

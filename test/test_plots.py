@@ -104,7 +104,7 @@ class TestPlots(unittest.TestCase):
             self.fail(f"errorbar raised an exception: {e}")
 
     def test_regressionPlot(self):
-        self.regression_model = regression(self.data, kind="gaussian")
+        self.regression_model = regression(self.data, method="gaussian")
         try:
             gplt.regressionPlot(
                 self.regression_model, xlabel="X Axis", title="Regression Plot"
