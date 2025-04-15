@@ -1,10 +1,10 @@
-grasp.functions package
+grasp.stats package
 ========================
 
 Module contents
 ---------------
 
-.. automodule:: grasp.functions
+.. automodule:: grasp.stats
    :members:
    :undoc-members:
    :show-inheritance:

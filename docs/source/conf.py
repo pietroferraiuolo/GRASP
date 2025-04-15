@@ -1,6 +1,6 @@
 import os
 import sys
-sys.path.insert(0, os.path.abspath('/home/pietrof/git/G-GCAS'))
+sys.path.insert(0, os.path.abspath('/home/pietrof/git/GRASP'))
 # Configuration file for the Sphinx documentation builder.
 #
 # This file only contains a selection of the most common options. For a full
@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.abspath('/home/pietrof/git/G-GCAS'))
 
 # -- Project information -----------------------------------------------------
 
-project = 'G-GCAS: Gaia Globular Clusters Analysis Software'
+project = 'GRASP: Globular clusteR Astrometry and Photometry Software'
 copyright = '2024, Pietro Ferraiuolo'
 author = 'Pietro Ferraiuolo'
 

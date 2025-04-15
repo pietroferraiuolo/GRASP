@@ -1,5 +1,5 @@
-G-GCAS
-======
+GRASP
+=====
 
 .. toctree::
    :maxdepth: 4

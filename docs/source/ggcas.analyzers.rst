@@ -28,6 +28,22 @@ grasp.analyzers._Rcode module
    :undoc-members:
    :show-inheritance:
 
+grasp.analyzers.mcluster module
+-----------------------------
+
+.. automodule:: grasp.analyzers.mcluster
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+grasp.analyzers.king module
+-----------------------------
+
+.. automodule:: grasp.analyzers.king
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Module contents
 ---------------
 

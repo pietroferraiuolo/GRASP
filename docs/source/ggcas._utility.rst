@@ -4,18 +4,10 @@ grasp._utility package
 Submodules
 ----------
 
-grasp._utility.folder\_paths module
------------------------------------
-
-.. automodule:: grasp._utility.folder_paths
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-grasp._utility.osutils module
+grasp._utility.cluster module
 -----------------------------
 
-.. automodule:: grasp._utility.osutils
+.. automodule:: grasp._utility.cluster
    :members:
    :undoc-members:
    :show-inheritance:
