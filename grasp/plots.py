@@ -62,15 +62,15 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     kde_kind : str, optional
         Kind of kernel density estimation to be computed. The default is 'gaussian'.
         Options:
-            'gaussian'
-            'boltzmann'
-            'exponential'
-            'king'
-            'rayleigh'
-            'maxwell'
-            'lorentzian'
-            'lognormal'
-            'power'
+        - 'gaussian'
+        - 'boltzmann'
+        - 'exponential'
+        - 'king'
+        - 'rayleigh'
+        - 'maxwell'
+        - 'lorentzian'
+        - 'lognormal'
+        - 'power'
 
     Other Parameters
     ----------------
@@ -337,10 +337,15 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
         Kind of kernel density estimation to be computed. The default is
         'gaussian'.
         Options:
-            'gaussian'
-            'exponential'
-            'boltzmann'
-            'king'
+        - 'gaussian'
+        - 'boltzmann'
+        - 'exponential'
+        - 'king'
+        - 'rayleigh'
+        - 'maxwell'
+        - 'lorentzian'
+        - 'lognormal'
+        - 'power'
 
     Other Parameters
     ----------------
@@ -631,16 +636,15 @@ def regressionPlot(
         The regression model to be plotted. You can either pass the already fitted
         model or a string indicating the kind of regression to be fitted. The
         available options are:
-            'gaussian'
-            'exponential'
-            'boltzmann'
-            'king'
-            'rayleigh'
-            'maxwell'
-            'lorentzian'
-            'lognormal'
-            'power'
-            'linear'
+        - 'gaussian'
+        - 'boltzmann'
+        - 'exponential'
+        - 'king'
+        - 'rayleigh'
+        - 'maxwell'
+        - 'lorentzian'
+        - 'lognormal'
+        - 'power'
         If you pass a callable, it must be a function that takes the data as
         input and returns the fitted model. See `grasp.starts.fit_data` documentation
         for more information.

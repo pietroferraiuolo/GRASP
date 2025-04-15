@@ -18,7 +18,6 @@ Functions
     integration routine.
 
 """
-
 import os
 import subprocess
 from grasp.core.osutils import get_file_list
@@ -43,18 +42,17 @@ def king_integrator(w0, output='profile'):
     output : str, optional
         Specifies which output file(s) to retain. The default is 'profile'.
         Options :
-            - all: All of the below produced files
-            - CalCurve: Caloric curve of the system
-            - Cv:
-            - CvNtK:
-            - Er:
-            - Etot: total energy of the system
-            - params:
-            - phi: information about the gravitational potential of the system
-            - profiles: (normalized) density and w0 profiles with respect to the
-                dimentionless radial distance from the centre
-            - Skin: Surface kinetick energy distribution
-            - x0Cv:
+        - all : All of the below produced files
+        - CalCurve : Caloric curve of the system
+        - Cv :
+        - CvNtK :
+        - Er :
+        - Etot : total energy of the system
+        - params :
+        - phi : information about the gravitational potential of the system
+        - profiles : (normalized) density and w0 profiles with respect to the dimentionless radial distance from the centre
+        - Skin : Surface kinetick energy distribution
+        - x0Cv :
 
     Returns
     -------

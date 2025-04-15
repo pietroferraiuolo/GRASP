@@ -300,18 +300,18 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             List of parameters to retrieve, from the ones printed by ''.print_table()''.
             If this argument is missing, the only parameter retrieved is 'source_id'.
             Aliases:
-                'dat'
-                'data'
-                'params'
-                'parameters'
+            - 'dat'
+            - 'data'
+            - 'params'
+            - 'parameters'
         conditions : str or list of str
             Listo of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
             Aliases:
-                'cond'
-                'conds'
-                'condition'
-                'conditions'
+            - 'cond'
+            - 'conds'
+            - 'condition'
+            - 'conditions'
 
         Returns
         -------
@@ -383,10 +383,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             List of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
             Aliases:
-                'cond'
-                'conds'
-                'condition'
-                'conditions'
+            - 'cond'
+            - 'conds'
+            - 'condition'
+            - 'conditions'
 
         Returns
         -------
@@ -438,10 +438,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Listo of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
             Aliases:
-                'cond'
-                'conds'
-                'condition'
-                'conditions'
+            - 'cond'
+            - 'conds'
+            - 'condition'
+            - 'conditions'
 
         Returns
         -------
@@ -493,10 +493,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Listo of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
             Aliases:
-                'cond'
-                'conds'
-                'condition'
-                'conditions'
+            - 'cond'
+            - 'conds'
+            - 'condition'
+            - 'conditions'
         Returns
         -------
         rv_cluster : astropy.Table

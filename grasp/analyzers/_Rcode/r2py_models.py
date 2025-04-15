@@ -78,9 +78,9 @@ Predicted : {self._predicted}
     def ndG(self):
         """
         Array containing in order:
-            n: the number of data points used to fit the model
-            d: the number of parameters/features fitted with the model
-            G: the number of components in the model
+        - n : the number of data points used to fit the model
+        - d : the number of parameters/features fitted with the model
+        - G : the number of components in the model
         """
         return _np.array([self.model["n"], self.model["d"], self.model["G"]])
 
@@ -105,11 +105,11 @@ Predicted : {self._predicted}
         """
         Dictionary containint all the parameters estimated by the model, for each component
         Components:
-            pro: the mixing proportions
-            mean: the means
-            variance: another dictionary containing the variance and covariance matrices:
-                covMats: the covariance matrices for each group of the model
-                sigmasq: the variance of the features of the model
+        - pro : the mixing proportions
+        - mean : the means
+        - variance : another dictionary containing the variance and covariance matrices:
+        - covMats : the covariance matrices for each group of the model
+        - sigmasq : the variance of the features of the model
         """
         self.model["parameters"]["variance"]["covMats"] = _np.swapaxes(
             self.model["parameters"]["variance"]["sigma"], 0, 2
