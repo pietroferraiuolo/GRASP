@@ -26,7 +26,7 @@ _king_dir = KING_INTEGRATOR_FOLDER
 _king_exe = os.path.join(_king_dir, 'king_integrator')
 
 
-def king_integrator(w0, output='profile'):
+def king_integrator(w0: float | int | str, output: str | list[str] = 'profile') -> str | list[str]:
     r"""
     This function calls a Fortran90 code for the Single-Mass King model 
     integration routine.

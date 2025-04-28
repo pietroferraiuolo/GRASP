@@ -24,17 +24,19 @@ Now we can call methods to read the parameters
 8.82
 """
 
-import os, shutil, pandas as pd, numpy as np
-import matplotlib.pyplot as plt
 import astropy.units as u
 from astropy.table import Table
+import matplotlib.pyplot as plt
+import os, shutil, pandas as pd, numpy as np
+from grasp.plots import label_font, title_font
+from astropy.units import Quantity as _Quantity
+from typing import Optional as _Optional, Union as _Union
 from grasp.core.folder_paths import (
     CLUSTER_DATA_FOLDER,
     CLUSTER_MODEL_FOLDER,
     CATALOG_FILE,
     UNTRACKED_DATA_FOLDER,
 )
-from grasp.plots import label_font, title_font
 
 
 class Cluster:
@@ -57,30 +59,30 @@ class Cluster:
     >>> ngc104 = Cluster('ngc104')
     """
 
-    def __init__(self, name: str = None, **params):
+    def __init__(self, name: _Optional[str] = None, **params):
         """The constructor"""
         if name == 'UntrackedData' or name is None:
             print("Not a Cluster: no model available")
-            self.data_path = UNTRACKED_DATA_FOLDER
-            self.id = "UntrackedData"
-            self.ra = params.get("ra", None)
-            self.dec = params.get("dec", None)
-            self.model = None
+            self.data_path: str = UNTRACKED_DATA_FOLDER
+            self.id: str = "UntrackedData"
+            self.ra: _Optional[_Union[float,_Quantity]] = params.get("ra", None)
+            self.dec: _Optional[_Union[float,_Quantity]] = params.get("dec", None)
+            self.model: _Optional[Table | pd.DataFrame] = None
         else:
             self.id = name.upper()
             self.data_path = CLUSTER_DATA_FOLDER(self.id)
             self.model_path = CLUSTER_MODEL_FOLDER(self.id)
             parms = self._load_cluster_parameters(self.id)
-            self.ra = parms.loc["ra"] * u.deg
-            self.dec = parms.loc["dec"] * u.deg
-            self.dist = parms.loc["dist"] * u.kpc
-            self.rc = parms.loc["rc"] / 60 * u.deg
-            self.rh = parms.loc["rh"] / 60 * u.deg
-            self.w0 = parms.loc["w0"]
-            self.logc = parms.loc["logc"]
-            self.rt = self.rc * 10**self.logc
-            self.cflag = ["True " if parms.loc["collapsed"] == "Y" else False][0]
-            self.model = self._load_king_model()
+            self.ra: _Quantity | float = parms.loc["ra"]      * u.deg
+            self.dec: _Quantity| float = parms.loc["dec"]     * u.deg
+            self.dist:_Quantity| float = parms.loc["dist"]    * u.kpc
+            self.rc: _Quantity | float = parms.loc["rc"] / 60 * u.deg
+            self.rh: _Quantity | float = parms.loc["rh"] / 60 * u.deg
+            self.w0: float             = parms.loc["w0"]
+            self.logc: float           = parms.loc["logc"]
+            self.rt: _Quantity | float = self.rc * 10**self.logc
+            self.cflag: bool           = True if parms.loc["collapsed"] == "Y" else False
+            self.model: _Optional[Table | pd.DataFrame] = self._load_king_model()
 
     def __str__(self):
         """String representation"""
@@ -107,11 +109,11 @@ class Cluster:
             scale : scale of the axes, default linear.
             grid  : grid on the plot
         """
-        scale = kwargs.get("scale", None)
-        xscale = kwargs.get("xscale", None)
-        yscale = kwargs.get("yscale", None)
-        c = kwargs.get("color", "black")
-        grid = kwargs.get("grid", False)
+        scale: _Optional[str] = kwargs.get("scale", None)
+        xscale: _Optional[str] = kwargs.get("xscale", None)
+        yscale: _Optional[str] = kwargs.get("yscale", None)
+        c: str = kwargs.get("color", "black")
+        grid: bool = kwargs.get("grid", False)
         plt.figure(figsize=(8, 6))
         plt.plot(self.model["xi"], self.model["w"], color=c)
         plt.plot(
@@ -135,7 +137,7 @@ class Cluster:
         plt.legend(loc="best")
         plt.show()
 
-    def _load_cluster_parameters(self, name: str):
+    def _load_cluster_parameters(self, name: str) -> pd.Series[float] | pd.DataFrame:
         """
         Loads the parameters of the requested cluster from the Harris Catalog
         2010 Globular Cluster Database, written in the Catalogue.xlsx file
@@ -154,7 +156,7 @@ class Cluster:
         cat_row = catalog.loc[name.upper()]
         return cat_row
 
-    def _load_king_model(self):
+    def _load_king_model(self) -> Table | pd.DataFrame:
         """
         Loads the integrated Single-Mass King model for the cluster.
 
@@ -169,7 +171,7 @@ class Cluster:
                 potential.
                 'rho': the noralized density profile of the clusted.
         """
-        model = Table()
+        model: Table = Table()
         try:
             try:
                 file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
@@ -192,8 +194,10 @@ class Cluster:
             )
             if not os.path.exists(self.model_path):
                 os.mkdir(self.model_path)
-            result = king_integrator(self.w0)
-            mod = pd.read_csv(result, sep='\s+', skipfooter=1, engine='python')
+            result: str | list[str] = king_integrator(self.w0, output = 'profile')
+            if isinstance(result, list):
+                result = result[0]  # Use the first file if result is a list
+            mod = pd.read_csv(result, sep=r'\s+', skipfooter=1, engine='python')
             model["xi"] = mod.xi
             model["w"] = mod.w
             model["rho"] = mod.rho_rho0

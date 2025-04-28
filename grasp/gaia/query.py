@@ -86,7 +86,7 @@ _QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
 
 
-def available_tables(key: str = None):
+def available_tables(key: _Opt[str] = None):
     """
     Prints out the complete list of data tables present in the Gaia archive.
 
@@ -178,7 +178,7 @@ class GaiaQuery:
 
     """
 
-    def __init__(self, gaia_table: _Opt[_Union[str, list]] = "gaiadr3.gaia_source"):
+    def __init__(self, gaia_table: _Opt[_Union[str, list[str]]] = "gaiadr3.gaia_source"):
         """
         The Constructor
 
@@ -319,10 +319,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Result of the async query, stored into an astropy table.
 
         """
-        ra = kwargs.get("ra", None)
-        dec = kwargs.get("dec", None)
-        name = kwargs.get("name", "UntrackedData")
-        gc, ra, dec, savename = self._get_coordinates(gc, ra=ra ,dec=dec ,name=name)
+        ra: _Opt[float | str] = kwargs.get("ra", None)
+        dec: _Opt[float | str] = kwargs.get("dec", None)
+        name: str = kwargs.get("name", "UntrackedData")
+        gc, ra, dec, savename = self._get_coordinates(gc, ra=ra ,dec=dec, name=name)
         self._queryInfo = {
             "Scan Info": {"RA": ra, "DEC": dec, "Scan Radius": radius},
             "Flag": {"Query": "free"},
@@ -404,7 +404,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         self,
         radius,
         gc: _Opt[_Union[_Cluster, str]] = None,
-        save: str = False,
+        save: bool = False,
         **kwargs,
     ):
         """
@@ -514,7 +514,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         self._queryInfo['Flag']['Query'] = 'radial velocity'
         return rv_sample
 
-    def _run_query(self, gc_id, ra, dec, radius, data, cond, save):
+    def _run_query(self, gc_id: str, ra: str, dec: str, radius: str, data: str, cond: list[str], save: bool):
         """
         The actual sub-routine which sends the query, checking if data already
         exists with the same query conditions, in which case loading it.
@@ -654,7 +654,7 @@ Loading it..."""
         return self._fold
 
     def _formatCheck(
-        self, data: _Opt[_Union[str, list]], conditions: _Opt[_Union[str, list]]
+        self, data: str | list[str], conditions: str | list[str]
     ):
         """
         Function to check and correct the format the 'data' and 'conditions'
@@ -747,7 +747,7 @@ Loading it..."""
         self.last_query = query
         return query
 
-    def _get_coordinates(self, gc, **kwargs):
+    def _get_coordinates(self, gc: _Opt[str | _Cluster], **kwargs) -> tuple[_Cluster, float, float, str]:
         """
         Function to get the coordinates of the cluster, either from the Cluster
         object or from the kwargs.
@@ -770,21 +770,21 @@ Loading it..."""
 
         """
         if gc is None:
-            ra = kwargs.get("ra", None)
-            dec = kwargs.get("dec", None)
-            gc = _Cluster(ra=ra, dec=dec)
-            savename = kwargs.get("name", "UntrackedData")
+            ra: float = kwargs.get("ra", None)
+            dec: float = kwargs.get("dec", None)
+            gc: _Cluster = _Cluster(ra=ra, dec=dec)
+            savename: str = kwargs.get("name", "UntrackedData")
         else:
             if isinstance(gc, _Cluster):
-                ra = gc.ra
-                dec = gc.dec
-                savename = gc.id
+                ra: float = gc.ra
+                dec: float = gc.dec
+                savename: str = gc.id
             elif isinstance(gc, str):
                 gc = _Cluster(gc)
-                ra = gc.ra
-                dec = gc.dec
+                ra: float = gc.ra
+                dec: float = gc.dec
                 savename = gc.id
-        return gc, ra, dec, savename
+        return (gc, ra, dec, savename)
 
     def __check_query_exists(self, name: str) -> bool | tuple[bool, str]:
         """
