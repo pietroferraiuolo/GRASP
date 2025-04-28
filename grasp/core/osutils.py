@@ -1,7 +1,7 @@
 """
 Author(s)
 ---------
-    - Pietro Ferraiuolo : Written in 2024
+- Pietro Ferraiuolo : Written in 2024
 
 Description
 -----------
@@ -16,6 +16,7 @@ Examples
 
 import os as _os
 import datetime as _dt
+from typing import Any as _Any
 from grasp.core import folder_paths as _fn
 from astropy.table import QTable as _QTable
 
@@ -23,7 +24,7 @@ datapath = _fn.BASE_DATA_PATH
 querypath = _fn.QUERY_DATA_FOLDER
 
 
-def load_data(*, tn: str = None, data_format="fits", file_format: str = '.fits', name: str = None, as_sample: bool = True):
+def load_data(*, tn: str = None, data_format: str="fits", file_format: str = '.fits', name: str = None, as_sample: bool = True):
     """
     Loads the data from a file as an Astropy quantity table.
 
@@ -118,7 +119,7 @@ def load_simulation_data(tn, format="ascii", as_sample: bool = True):
 
 
 
-def get_file_list(tn=None, fold=None, key: str = None):
+def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | list[str]:
     """
     Returns the file list of a given globular cluster datapath.
 
@@ -223,7 +224,7 @@ def get_file_list(tn=None, fold=None, key: str = None):
     return fl
 
 
-def get_kwargs(names: tuple, default, kwargs):
+def get_kwargs(names: tuple[str], default: _Any, kwargs: dict[str, _Any]) -> _Any:
     """
     Gets a tuple of possible kwargs names for a variable and checks if it was
     passed, and in case returns it.
@@ -286,7 +287,7 @@ def timestamp():
     return tn
 
 
-def _findTracknum(tn, complete_path: bool = True):
+def _findTracknum(tn: str, complete_path: bool = True) -> str | list[str]:
     """
     Search for the tracking number given in input within all the data path subfolders.
 
@@ -305,7 +306,7 @@ def _findTracknum(tn, complete_path: bool = True):
         tracking number is present, sorted in alphabetical order.
 
     """
-    tn_path = []
+    tn_path: list[str] = []
     for data_type in _os.listdir(datapath):
         querypath = _os.path.join(datapath, data_type)
         for fold in _os.listdir(querypath):

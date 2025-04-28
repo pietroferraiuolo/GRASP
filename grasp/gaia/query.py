@@ -603,10 +603,10 @@ Loading it..."""
 
         Parameters
         ----------
+        data : astropy.table.QTable
+            The astropy table containing the data to save.
         name : str
             The name of the cluster.
-        info : dict
-            The dictionary containing the information to write.
 
         Returns
         -------

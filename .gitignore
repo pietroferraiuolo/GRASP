@@ -13,6 +13,7 @@ test/__pycache__/
 test/analyzers/__pycache__/
 test/_utility/__pycache__/
 **/__pycache__/
+typings/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
