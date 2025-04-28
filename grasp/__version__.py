@@ -11,7 +11,7 @@ __version__ = '0.9.1'
 __author__ = 'Pietro Ferraiuolo'
 __author_email__ = 'pietro.ferraiuolo@inaf.it'
 __license__ = 'MIT License'
-__url__ = 'https://github.com/pietroferraiuolo/G-GCAS'
+__url__ = 'https://github.com/pietroferraiuolo/GRASP'
 
 __all__ = ['__title__', '__description__', '__version__', '__author__',
            '__author_email__', '__license__', '__url__']

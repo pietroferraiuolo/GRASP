@@ -14,42 +14,74 @@ Examples
 
 """
 
-import os
-import datetime as dt
-from astropy.table import QTable
-from grasp.core import folder_paths as fn
+import os as _os
+import datetime as _dt
+from grasp.core import folder_paths as _fn
+from astropy.table import QTable as _QTable
 
-datapath = fn.BASE_DATA_PATH
-querypath = fn.QUERY_DATA_FOLDER
+datapath = _fn.BASE_DATA_PATH
+querypath = _fn.QUERY_DATA_FOLDER
 
 
-def load_data(tn, name: str = None, format="ascii.tab", as_sample: bool = True):
+def load_data(*, tn: str = None, data_format="fits", file_format: str = '.fits', name: str = None, as_sample: bool = True):
     """
-    Loads the data found in the file as an astropy quantity table.
+    Loads the data from a file as an Astropy quantity table.
 
     Parameters
     ----------
-    tn : str
-        Tracking number of the data to load.
+    tn : str, optional
+        Tracking number of the data to load. If provided, the function will search
+        for the file in the corresponding tracking number folder.
+    data_format : str, optional
+        The format of the file to load. Default is 'fits'. Refer to the Astropy
+        QTable.read documentation for supported formats.
+    file_format : str, optional
+        The file extension to use when constructing the file name. Default is '.fits'.
     name : str, optional
         Name of the specific data file to load. If not specified, the default
-        name is 'query_data.txt'.
-    format : str, optional
-        The format of the file to load. Default is 'ascii.tab'. (see astropy.table.QTable.read
-        documentation for the options).
+        name is 'query_data.fits'. If `tn` is not provided, `name` must be the
+        complete file path to the file to load (e.g., '~/data/your_data.fits').
+    as_sample : bool, optional
+        If True, the loaded data will be returned as a Sample object; otherwise,
+        it will be returned as a QTable.
 
     Returns
     -------
-    data : astropy table
-        The loaded data of the file.
+    data : astropy.table.QTable or grasp.Sample
+        The loaded data from the file. If `as_sample` is True, the data is returned
+        as a Sample object; otherwise, it is returned as a QTable.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified file cannot be found.
+    ValueError
+        If both `tn` and `name` are None.
+
+    Examples
+    --------
+    Load data using a tracking number:
+        >>> data = load_data(tn="20240101_123456")
+
+    Load data using a specific file path:
+        >>> data = load_data(name="/path/to/your_data.fits")
+
+    Load data as a QTable instead of a Sample:
+        >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
-    file_name = "query_data.txt" if name is None else name
-    file_path = _findTracknum(tn, complete_path=True)
-    file = os.path.join(file_path, file_name)
-    data = QTable.read(file, format=format)
+    file_name = ("query_data" + file_format) if name is None else (name + file_format)
+    if tn is not None:
+        file_path = _findTracknum(tn, complete_path=True)
+        file = _os.path.join(file_path, file_name)
+    else:
+        file = name
+    data = _QTable.read(file, format=data_format)
     if as_sample:
         from grasp._utility.sample import Sample
-        gc = file_path.split("/")[-2]
+        try:
+            gc = _os.path.dirname(file).split("/")[-2]
+        except IndexError:
+            gc = 'UntrackedData'
         data = Sample(data, gc=gc)
     return data
 
@@ -78,7 +110,7 @@ def load_simulation_data(tn, format="ascii", as_sample: bool = True):
         The loaded data of the file.
     """
     file_name = get_file_list(tn=tn, key='.txt')
-    data = QTable.read(file_name, format=format)
+    data = _QTable.read(file_name, format=format)
     if as_sample:
         from grasp._utility.sample import Sample
         data = Sample(data)
@@ -151,14 +183,14 @@ def get_file_list(tn=None, fold=None, key: str = None):
         ['.../G-GCAS/grasp/data/models/NGC104/SM_king.txt']
     """
     if tn is None and fold is not None:
-        fl = sorted([os.path.join(fold, file) for file in os.listdir(fold)])
+        fl = sorted([_os.path.join(fold, file) for file in _os.listdir(fold)])
     else:
         if fold is None:
             fold = _findTracknum(tn, complete_path=True)
             fl = sorted(
                 [
-                    os.path.join(fold, tn, file)
-                    for file in os.listdir(os.path.join(fold, tn))
+                    _os.path.join(fold, tn, file)
+                    for file in _os.listdir(_os.path.join(fold, tn))
                 ]
             )
         else:
@@ -169,7 +201,7 @@ def get_file_list(tn=None, fold=None, key: str = None):
                 for path in paths:
                     if fold in path.split("/")[-2]:
                         fl = sorted(
-                            [os.path.join(path, file) for file in os.listdir(path)]
+                            [_os.path.join(path, file) for file in _os.listdir(path)]
                         )
                     else:
                         raise Exception
@@ -234,9 +266,9 @@ def tnlist(gc_name: str):
         List of tracking numbers for the given globular cluster.
 
     """
-    basepath = fn.CLUSTER_DATA_FOLDER(gc_name)
-    tn = os.listdir(basepath)
-    tns = sorted([os.path.join(basepath, tt) for tt in tn])
+    basepath = _fn.CLUSTER_DATA_FOLDER(gc_name)
+    tn = _os.listdir(basepath)
+    tns = sorted([_os.path.join(basepath, tt) for tt in tn])
     return tns
 
 
@@ -250,7 +282,7 @@ def timestamp():
         Tracking number.
 
     """
-    tn = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+    tn = _dt.datetime.now().strftime("%Y%m%d_%H%M%S")
     return tn
 
 
@@ -274,13 +306,13 @@ def _findTracknum(tn, complete_path: bool = True):
 
     """
     tn_path = []
-    for data_type in os.listdir(datapath):
-        querypath = os.path.join(datapath, data_type)
-        for fold in os.listdir(querypath):
-            search_fold = os.path.join(querypath, fold)
-            if tn in os.listdir(search_fold):
+    for data_type in _os.listdir(datapath):
+        querypath = _os.path.join(datapath, data_type)
+        for fold in _os.listdir(querypath):
+            search_fold = _os.path.join(querypath, fold)
+            if tn in _os.listdir(search_fold):
                 if complete_path:
-                    tn_path.append(os.path.join(search_fold, tn))
+                    tn_path.append(_os.path.join(search_fold, tn))
                 else:
                     tn_path.append(fold)
     path_list = sorted(tn_path)

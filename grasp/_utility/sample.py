@@ -23,7 +23,6 @@ import pandas as _pd
 from astropy import units as _u
 from typing import List as _List
 from grasp._utility.cluster import Cluster as _Cluster
-from typing import Optional as _Optional, Union as _Union
 from astropy.table import QTable as _QTable, Table as _Table
 
 
@@ -43,14 +42,14 @@ class Sample:
         Globular cluster object used for the query.
     """
 
-    def __init__(self, sample, gc: _Optional[_Union[_Cluster, str]] = None):
+    def __init__(self, sample: _pd.DataFrame | _QTable | _Table, gc: _Cluster | str = None):
         """The constructor"""
         self.qinfo = None
         self._sample = (
             _QTable.from_pandas(sample) if isinstance(sample, _pd.DataFrame) else sample
         )
-        self.__check_simulation()
         self._table = None
+        self.__check_simulation()
         self._bckupSample = self._sample.copy()
         if isinstance(gc, _Cluster):
             self.gc = gc
@@ -86,10 +85,13 @@ class Sample:
 
     def __getattr__(self, attr):
         """The attribute getter"""
-        if attr in self._sample.colnames:
-            return self._sample[attr]
-        else:
-            raise AttributeError(f"'Sample' object has no attribute '{attr}'")
+        try:
+            if attr in self._sample.colnames:
+                return self._sample[attr]
+            else:
+                raise AttributeError(f"'Sample' object has no attribute '{attr}'")
+        except AttributeError:
+            getattr(self._sample, attr)
 
     def __setitem__(self, key, value):
         """The item setter"""
@@ -111,7 +113,12 @@ class Sample:
     def sample(self):
         """Returns the sample data"""
         return self._sample
-
+    
+    @property
+    def meta(self):
+        """Returns the metadata of the sample"""
+        return self._sample.meta
+    metadata = meta
 
     def drop_columns(self, columns: list):
         """

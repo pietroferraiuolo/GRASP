@@ -20,7 +20,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     package_data={
-        'grasp': ['data/*.xlsx', 'data/query/**/**/*.txt', 'data/models/**/*.txt'],
+        'grasp': ['sysdata/_Catalogue.xlsx', 'sysdata/base.frm'],
     },
     install_requires=requires,
     author=about['__author__'],

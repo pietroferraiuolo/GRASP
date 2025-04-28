@@ -65,11 +65,11 @@ import os as _os
 import numpy as _np
 import configparser as _cp
 from astropy import units as _u
-from astropy.table import Table as _Table
 from astroquery.gaia import Gaia as _Gaia
 from grasp._utility.sample import Sample as _Sample
 from typing import Optional as _Opt, Union as _Union
 from grasp._utility.cluster import Cluster as _Cluster
+from astropy.table import Table as _Table, QTable as _QTable
 from grasp.core.osutils import (
     get_kwargs,
     timestamp as _ts,
@@ -82,7 +82,7 @@ from grasp.core.folder_paths import (
     UNTRACKED_DATA_FOLDER as _UD,
     )
 
-_QDATA = "query_data.txt"
+_QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
 
 
@@ -552,7 +552,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
 {check[1]}.
 Loading it..."""
             )
-            sample = _loadData(check[1], as_sample=False)
+            sample = _loadData(name = check[1], as_sample=False)
             self.last_result = check[1]
             print(f"Sample number of sources: {len(sample):d}")
         return sample
@@ -580,15 +580,62 @@ Loading it..."""
         _os.mkdir(tnfold)
         data = _os.path.join(tnfold, _QDATA)
         info = _os.path.join(tnfold, _QINFO)
-        if isinstance(dat, _Table) is False:
-            dat = _Table(dat)
-        dat.write(data, format="ascii.tab")
+        if any([isinstance(dat, _Table), not isinstance(dat, _QTable)]):
+            dat = _QTable(dat)
+        dat = self._writeHeader(dat, name)
+        dat.write(data, format="fits")
         for section, options in self._queryInfo.items():
             config[section] = options
+        import warnings
+        warnings.warn(
+            "The 'query_info.ini' will be deprecated in future versions, shifting to the use of fits headers",
+            DeprecationWarning,
+        )
         with open(info, "w", encoding="UTF-8") as configfile:
             config.write(configfile)
         print(data)
         print(info)
+
+    
+    def _writeHeader(self, data: _QTable, name: str) -> _QTable:
+        """
+        Function to write the header of the query info file.
+
+        Parameters
+        ----------
+        name : str
+            The name of the cluster.
+        info : dict
+            The dictionary containing the information to write.
+
+        Returns
+        -------
+        info : dict
+            The dictionary with the header added.
+
+        """
+        header = {
+            "OBJECT": (
+                name.upper() if not name.upper() == "UNTRACKEDDATA" else "UNDEF",
+                'object name'),
+            "RA": (self._queryInfo["Scan Info"]["RA"].value, 'right ascension of scan centre [deg]'),
+            "DEC": (self._queryInfo["Scan Info"]["DEC"].value, 'declination of scan centre [deg]'),
+            "RADIUS": (
+                self._queryInfo["Scan Info"]["Scan Radius"], 'radius of scan circle [deg]',
+            ),
+            "CONDS": (
+                not self._queryInfo["Scan Info"]["Conditions Applied"]=='None',
+                'conditions applied to the query',
+            )
+        }
+        if header["CONDS"] == True:
+            for i, c in enumerate(self._queryInfo["Scan Info"]["Conditions Applied"]):
+                header[f"COND{i}"] = c
+        for key,value in header.items():
+                data.meta[key] = value
+        return data
+
+
 
     def _checkPathExist(self, dest: str):
         """
@@ -739,7 +786,7 @@ Loading it..."""
                 savename = gc.id
         return gc, ra, dec, savename
 
-    def __check_query_exists(self, name):
+    def __check_query_exists(self, name: str) -> bool | tuple[bool, str]:
         """
         Checks wether the requested query already exist saved for the Cluster.
 
@@ -792,7 +839,8 @@ Loading it..."""
             table = _Gaia.load_table(self._table)
         return table
 
-    def __descr(self):
+
+    def __descr(self) -> str:
         """Print out tables descriptions"""
         table = self.__load_table()
         text = ""
