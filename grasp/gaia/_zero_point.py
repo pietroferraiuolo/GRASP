@@ -1,7 +1,21 @@
+"""
+Author(s) 
+---------
+- Pietro Ferraiuolo : written in 2024
+
+Description
+-----------
+"""
+
+from typing import Optional as _opt
 from zero_point import zpt as _zpt
+from pandas import DataFrame as _DF
+from numpy.typing import ArrayLike as _array
 
 
-def zero_point_correction(sample = None, *zargs):
+def zero_point_correction(
+    *zargs: _opt[list[_array | float]], sample: _opt[_DF] = None
+) -> _array:
     """
     Computes the parallax zero point correction for a given sample of stars,
     following the "recipe" given in the dited paper
@@ -13,22 +27,22 @@ def zero_point_correction(sample = None, *zargs):
     - `pseudocolour`
     - `ecl_lat`
     - `astrometric_params_solved`
-    
+
     or, alternatively, these quantities separately, as singular arguments.
 
     NOTE:
     -----
-    for 5-p solutions (ra-dec-parallax-pmra-pmdec), the field 
+    for 5-p solutions (ra-dec-parallax-pmra-pmdec), the field
     `astrometric_params_solved` equals 31 and the `pseudocolour` variable can take
     any arbitrary values (even None). On the other hand, for 6-p solutions (ra-dec
     -parallax-pmra-pmdec-pseudocolour), the field `astrometric_params_solved` equals
     95 and the `nu_eff_used_in_astrometry` variable can take any arbitrary values
     (even None). For 2-p solutions (ra-dec), the field `astrometric_params_solved`
     equals 3 and the zero point correction cannot be computed.
-    
+
     Parameters
     ----------
-    sample : grasp._utility.sample.Sample, optional
+    sample : grasp._utility.sample.Sample or pd.DataFrame, optional
         The sample of stars to compute the zero point correction for, containing
         the needed parameters.
     *zargs : list, optional
@@ -45,28 +59,25 @@ def zero_point_correction(sample = None, *zargs):
     numpy.ndarray or Sample object
         The zero point correction for the given sample of stars. If the sample
         object was provided for the computation, this will automatically add the
-        `zero_point_correction` column in the sample. If not, then the array of 
+        `zero_point_correction` column in the sample. If not, then the array of
         the computed values are returned.
     """
     _zpt.load_tables()
-    print("""
+    print(
+        """
 Using the "Zero Point Correction" tool from Pau Ramos
 (Lindergren, et al., A&A 649, A4 (2021)"""
     )
     if sample is None:
-        zpc = _zpt.zero_point_correction(*zargs)
-        return zpc
+        sample: _array = _zpt.get_zpt(*zargs)
     else:
-        from pandas import DataFrame
         from grasp._utility.sample import Sample as _Sample
         if isinstance(sample, _Sample):
-            zpc = _zpt.zpt_wrapper(sample.to_pandas())
+            zpc: _DF = _zpt.zpt_wrapper(sample.to_pandas())
             sample.sample.add_column("zero_point_correction", zpc)
-        elif isinstance(sample, DataFrame):
+        elif isinstance(sample, _DF):
             zpc = _zpt.zpt_wrapper(sample)
             sample["zero_point_correction"] = zpc
         else:
-            raise ValueError(
-                "The sample provided is not a valid Sample object."
-            )
-        return sample
+            raise ValueError("The sample provided is not a valid Sample object.")
+    return sample

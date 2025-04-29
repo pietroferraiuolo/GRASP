@@ -83,7 +83,7 @@ class Sample:
         """The item getter"""
         return self._sample[key]
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str):
         """The attribute getter"""
         try:
             if attr in self._sample.colnames:
@@ -93,7 +93,7 @@ class Sample:
         except AttributeError:
             getattr(self._sample, attr)
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key: str, value):
         """The item setter"""
         self._sample[key] = value
 

@@ -137,7 +137,7 @@ class Cluster:
         plt.legend(loc="best")
         plt.show()
 
-    def _load_cluster_parameters(self, name: str) -> pd.Series[float] | pd.DataFrame:
+    def _load_cluster_parameters(self, name: str) -> pd.Series | pd.DataFrame:
         """
         Loads the parameters of the requested cluster from the Harris Catalog
         2010 Globular Cluster Database, written in the Catalogue.xlsx file
