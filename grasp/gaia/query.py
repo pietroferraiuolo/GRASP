@@ -62,7 +62,11 @@ object:
 """
 
 import os as _os
-from typing import Optional as _Opt, Union as _Union
+from typing import (
+    Optional as _Opt,
+    Union as _Union,
+    Any as _Any
+)
 import configparser as _cp
 import numpy as _np
 from astropy import units as _u
@@ -195,7 +199,7 @@ class GaiaQuery:
         self._table = gaia_table
         self._path = _BDP
         self._fold = None
-        self._queryInfo = {}
+        self._queryInfo: dict[str, dict[ str, _Any | _u.Quantity | float | str]] = {}
         self._baseQ = """SELECT {data}
 FROM {table}
 WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRCLE('ICRS',{circle}))=1
@@ -551,7 +555,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         if check is False:
             query = self._adqlWriter(ra, dec, radius, data=data, conditions=cond)
             job = _Gaia.launch_job_async(query)
-            sample = job.get_results()
+            sample: _Table = job.get_results()
             print(f"Sample number of sources: {len(sample):d}")
             self.last_result = sample
             if save:
@@ -567,7 +571,7 @@ Loading it..."""
             print(f"Sample number of sources: {len(sample):d}")
         return sample
 
-    def _saveQuery(self, dat: _Table | _QTable, name: str):
+    def _saveQuery(self, dat: _Table | _QTable | _Any, name: str):
         """
         Routine for saving the query with its information, in the 'query_data.txt'
         and 'query_info.txt' files
@@ -591,13 +595,12 @@ Loading it..."""
         data = _os.path.join(tnfold, _QDATA)
         info = _os.path.join(tnfold, _QINFO)
         if any([isinstance(dat, _Table), not isinstance(dat, _QTable)]):
-            dat = _QTable(dat)
-        dat = self._writeHeader(dat, name)
+            dat: _QTable = _QTable(dat)
+        dat: _Table|_QTable = self._writeHeader(dat, name)
         dat.write(data, format="fits")
         for section, options in self._queryInfo.items():
             config[section] = options
         import warnings
-
         warnings.warn(
             "The 'query_info.ini' will be deprecated in future versions, shifting to the use of fits headers",
             DeprecationWarning,
@@ -607,7 +610,7 @@ Loading it..."""
         print(data)
         print(info)
 
-    def _writeHeader(self, data: _Table|_QTable, name: str) -> _Table|_QTable:
+    def _writeHeader(self, data: _Table | _QTable, name: str) -> _Table | _QTable:
         """
         Function to write the header of the query info file.
 
@@ -653,7 +656,7 @@ Loading it..."""
             data.meta[key] = value
         return data
 
-    def _checkPathExist(self, dest: str):
+    def _checkPathExist(self, dest: str) -> str:
         """
         Check if the path exists, and if not creates it.
 
@@ -669,7 +672,9 @@ Loading it..."""
             print(f"Path '{self._fold}' did not exist. Created.")
         return self._fold
 
-    def _formatCheck(self, data: str | list[str], conditions: str | list[str]):
+    def _formatCheck(
+        self, data: str | list[str], conditions: str | list[str]
+    ) -> tuple[str, list[str]]:
         """
         Function to check and correct the format the 'data' and 'conditions'
         variables were imput with.
@@ -723,7 +728,14 @@ Loading it..."""
                 cond += conditions[-1]
         return dat, cond
 
-    def _adqlWriter(self, ra, dec, radius, data, conditions):
+    def _adqlWriter(
+        self,
+        ra: str | _u.Quantity | float,
+        dec: str | _u.Quantity | float,
+        radius: str | _u.Quantity | float,
+        data: str | list[str],
+        conditions: str | list[str],
+    ) -> str:
         """
         This function writes the query, correctly formatting all the variables
         in order to be accepted by the GAIA ADQL language.
@@ -748,11 +760,11 @@ Loading it..."""
 
         """
         if isinstance(ra, _u.Quantity):
-            ra = ra / _u.deg
+            ra = ra / _u.deg  # type: ignore
         if isinstance(dec, _u.Quantity):
-            dec = dec / _u.deg
+            dec = dec / _u.deg  # type: ignore
         if isinstance(radius, _u.Quantity):
-            radius = radius / _u.deg
+            radius = radius / _u.deg  # type: ignore
         circle = f"{ra},{dec},{radius:.3f}"
         dat, cond = self._formatCheck(data, conditions)
         query = self._baseQ.format(
@@ -872,7 +884,7 @@ Loading it..."""
             )
         return text
 
-    def __params(self):
+    def __params(self) -> str:
         """Print out available talbes parameters"""
         table = self.__load_table()
         text = ""
@@ -888,11 +900,11 @@ Loading it..."""
                 text += f"{column.name}     "
         return text
 
-    def __get_repr(self):
+    def __get_repr(self) -> str:
         """Get text for '__repr__' method"""
         return "<grasp.query.GaiaQuery class>"
 
-    def __get_str(self):
+    def __get_str(self) -> str:
         """Get text for '__str__' method"""
         tables = self.__load_table()
         # the old reprt with table descriptions
