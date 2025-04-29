@@ -250,6 +250,9 @@ def available_clusters():
     list
         List of available clusters.
     """
+    from tabulate import tabulate
     catalog = pd.read_excel(CATALOG_FILE, index_col=0)
     print(f"Available clusters: {len(catalog)}")
-    print(f"{catalog.index.tolist()}")
+    gclist = catalog.index.tolist()
+    gclist = [gclist[i:i+7] for i in range(0,len(gclist),7)]
+    print(tabulate(gclist, tablefmt='simple'))

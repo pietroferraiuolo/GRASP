@@ -38,7 +38,7 @@ _utility:
 
 """
 from .__version__ import *
-from grasp.core.osutils import load_data, load_simulation_data
+from grasp.core.osutils import load_data
 import grasp.core.folder_paths as gpaths
 
 from grasp.gaia._zero_point import zero_point_correction
@@ -59,11 +59,10 @@ def dr3():
     """Instance a GaiaQuery with DR3"""
 
     print("""
-GAIA - GLOBULAR CLUSTERS ANALYSIS SOFTWARE
             ..............
          ..:;;..:;;;;;:::::;;
        ;;;;;;::.::;;;;;;;;;;;;;
-      ;;;;.:;;;..;XXXXXX.::....:
+      ;;;;.:;;;..;XXXXXX.::....:           GAIA QUERY MODULE
      :;::;::..+XXXXXXXXX+:;;;;;;:
     ;::;:.:;;:XXXXXXXXXXX::::::::;        __ _  __ _(_) __ _
     .;;..;;;:.:XXXXXXXXX$$$$$$$$$$X.     / _` |/ _` | |/ _` |
@@ -71,13 +70,11 @@ GAIA - GLOBULAR CLUSTERS ANALYSIS SOFTWARE
     :;:.:;;.XXXXXXXXX$$$$$$$$$$$$$$;     \__, |\__,_|_|\__,_|
     .;;:.:X$$$$$$$$$$$$$$$$$$$$$$X.      |___/
     ..:;:$$$$$$$$$$$$$$$$$$$$$$X;.
-     :;;;$$$$$$$$$$$$$$$$$$$$::;;
+     :;;;$$$$$$$$$$$$$$$$$$$$::;;             INITIALIZED
       ...;$$$$$$$$$$$$$$x;:;;;;;
         ......:;:....;;;;;;;:.
-         ::::::::::;;;::...
-
-             INITIALIZED
-
+          ::::::::::;;;::...
+            ....::::.....
 """)
     return GaiaQuery()
 

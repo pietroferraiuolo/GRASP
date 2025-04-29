@@ -16,7 +16,7 @@ Examples
 
 import os as _os
 import datetime as _dt
-from typing import Any as _Any
+from typing import Any as _Any, Optional as _opt
 from grasp.core import folder_paths as _fn
 from astropy.table import QTable as _QTable
 
@@ -24,7 +24,14 @@ datapath = _fn.BASE_DATA_PATH
 querypath = _fn.QUERY_DATA_FOLDER
 
 
-def load_data(*, tn: str = None, data_format: str="fits", file_format: str = '.fits', name: str = None, as_sample: bool = True):
+def load_data(
+    *,
+    tn: _opt[str] = None,
+    data_format: str = "fits",
+    file_format: str = ".fits",
+    name: _opt[str] = None,
+    as_sample: bool = True,
+) -> _QTable | _Any:
     """
     Loads the data from a file as an Astropy quantity table.
 
@@ -70,8 +77,8 @@ def load_data(*, tn: str = None, data_format: str="fits", file_format: str = '.f
     Load data as a QTable instead of a Sample:
         >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
-    file_name = ("query_data" + file_format) if name is None else (name + file_format)
     if tn is not None:
+        file_name = ("query_data" + file_format) if name is None else (name + file_format)
         file_path = _findTracknum(tn, complete_path=True)
         file = _os.path.join(file_path, file_name)
     else:
@@ -79,44 +86,19 @@ def load_data(*, tn: str = None, data_format: str="fits", file_format: str = '.f
     data = _QTable.read(file, format=data_format)
     if as_sample:
         from grasp._utility.sample import Sample
-        try:
-            gc = _os.path.dirname(file).split("/")[-2]
-        except IndexError:
-            gc = 'UntrackedData'
+        if file_format=='.fits' and "OBJECT" in data.meta.keys():
+            gc = data.meta["OBJECT"]
+            if gc == 'UNDEF':
+                gc = "UntrackedData"
+        else:
+            try:
+                from grasp import Cluster
+                gc = _os.path.dirname(file).split("/")[-2]
+                gc = Cluster(gc)
+            except KeyError:
+                gc = "UntrackedData"
         data = Sample(data, gc=gc)
     return data
-
-
-def load_simulation_data(tn, format="ascii", as_sample: bool = True):
-    """
-    Loads the simulation data found in the file as an astropy quantity table.
-    
-    Parameters
-    ----------
-    tn : str
-        Tracking number of the data to load.
-    name : str, optional
-        Name of the specific data file to load. If not specified, the default
-        name is 'simulation_data.txt'.
-    format : str, optional
-        The format of the file to load. Default is 'ascii.tab'. 
-        (see astropy.table.QTable.read documentation for the options).
-    as_sample : bool, optional
-        If True, the loaded data will be returned as a Sample object,
-        otherwise as a QTable.        
-    
-    Returns
-    -------
-    data : astropy table os grasp.Sample
-        The loaded data of the file.
-    """
-    file_name = get_file_list(tn=tn, key='.txt')
-    data = _QTable.read(file_name, format=format)
-    if as_sample:
-        from grasp._utility.sample import Sample
-        data = Sample(data)
-    return data
-
 
 
 def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | list[str]:

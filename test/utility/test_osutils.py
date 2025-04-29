@@ -25,7 +25,7 @@ class TestOsutils(unittest.TestCase):
         self.assertTrue(np.array_equal(result['col1'], mock_table['col1']))
         self.assertTrue(np.array_equal(result['col2'], mock_table['col2']))
         mock_findTracknum.assert_called_once_with('dummy_tracking_number', complete_path=True)
-        mock_read.assert_called_once_with('/mock/path/query_data.txt', format='ascii.tab')
+        mock_read.assert_called_once_with('/mock/path/query_data.fits', format='fits')
 
     def test_get_kwargs(self):
         # Test with key present in kwargs
@@ -56,7 +56,7 @@ class TestOsutils(unittest.TestCase):
         self.assertEqual(result, expected)
 
     @patch('os.listdir')
-    @patch('grasp.core.osutils.fn.CLUSTER_DATA_FOLDER')
+    @patch('grasp.core.osutils._fn.CLUSTER_DATA_FOLDER')
     def test_tnlist(self, mock_cluster_data_folder, mock_listdir):
         # Mock the CLUSTER_DATA_FOLDER and listdir functions
         mock_cluster_data_folder.return_value = '/basepath/gc_name'

@@ -120,7 +120,7 @@ class Sample:
         return self._sample.meta
     metadata = meta
 
-    def drop_columns(self, columns: list):
+    def drop_columns(self, columns: list[str]):
         """
         Drops the specified columns from the sample data.
 
@@ -281,7 +281,7 @@ class Sample:
         return self.gc.__str__()
     
 
-    def apply_conditions(self, conditions: str|list|dict, inplace: bool = False):
+    def apply_conditions(self, conditions: str|list[str]|dict[str,str], inplace: bool = False):
         """
         Applies conditions to the sample data.
 
@@ -365,8 +365,9 @@ class Sample:
             return
 
 
-    def __get_repr(self):
+    def __get_repr(self) -> str:
         """Gets the str representation"""
+        from tabulate import tabulate
         if self._is_simulation:
             gctxt = f"""Simulated data sample"""
         elif self.gc.id == "UntrackedData":
@@ -376,12 +377,18 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
         else:
             gctxt = f"""Data sample for cluster {self.gc.id}
 """
-        stxt = "\nData Columns:\n"
-        i = 1
-        for name in self._sample.colnames:
-            stxt += name.lower() + " - "
-            if i % 5 == 0:
-                stxt += "\n"
-            i += 1
-        stxt = stxt[:-3]
+        stxt = "\n" # "\nData Columns:\n"
+        names: list[str] = [name.lower() for name in self._sample.colnames]
+        max_len: int = len(max(names, key=len))
+        terminal_min_size: int = 80
+        ncols: int
+        if terminal_min_size/max_len <1.5:
+            ncols = 2
+        else:
+            from math import ceil
+            ncols = ceil(terminal_min_size/max_len)
+        righe: list[str] = [names[i:i+ncols] for i in range(0, len(names), ncols)]
+        headers = ['Data Columns:']+['']*(ncols-1)
+        tabula: str = tabulate(righe, headers=headers, tablefmt='presto')
+        stxt += tabula.replace('|', ' ').replace('+','-')
         return gctxt + stxt

@@ -92,25 +92,27 @@ _QINFO = "query_info.ini"
 
 def available_tables(key: _Opt[str] = None):
     """
-    Prints out the complete list of data tables present in the Gaia archive.
+    Prints out the complete list of data tables names present in the Gaia archive.
 
     Parameters
     ----------
     key : str, optional
         A key used to restrict the printed tables. As example, if
-        >>> key = 'gaiadr3'
+
+        ```python
+        key = 'gaiadr3'
+        ```
+
         then only tables relative to the complete 3th data release will be printed
         out. Default is None, meaning all the tables will be printed.
     """
+    from tabulate import tabulate
     tables = _Gaia.load_tables(only_names=True)
+    tables: list[str] = [x.name for x in tables]
     if key is not None:
-        for table in tables:
-            name = table.name
-            if key in name:
-                print(name)
-    else:
-        for table in tables:
-            print(table.name)
+        tables = [x for x in tables if key in x]
+    row_tables = [tables[i:i+2] for i in range(0, len(tables), 2)]
+    print(tabulate(row_tables, tablefmt='plain'))
 
 
 class GaiaQuery:
@@ -890,14 +892,18 @@ Loading it..."""
         text = ""
         if isinstance(table, _np.ndarray):
             for t in table:
-                text += f"\n{t.name.upper()}\n" + "-" * len(t.name) + "\n"
+                text += f"\n{t.name.upper()}\n"
+                cols = []
                 for column in t.columns:
-                    text += f"{column.name}     "
+                    cols.append(column.name)
+                text += self.__format_tabular_print(cols, tablefmt="simple")
                 text += "\n"
         else:
             text = f"{table.name.upper()}\n" + "-" * len(table.name) + "\n"
+            cols = []
             for column in table.columns:
-                text += f"{column.name}     "
+                cols.append(column.name)
+            text += self.__format_tabular_print(cols, tablefmt="simple")
         return text
 
     def __get_repr(self) -> str:
@@ -917,8 +923,10 @@ Loading it..."""
                     + f"\n{table.description}\n"
                 )
                 text += "\nParameters:\n"
+                cols = []
                 for column in table.columns:
-                    text += f"{column.name}    "
+                    cols.append(column.name)
+                text += self.__format_tabular_print(lista = cols, tablefmt = "simple")
                 text += "\n"
         else:
             text = (
@@ -927,6 +935,35 @@ Loading it..."""
                 + f"\n{tables.description}\n"
             )
             text += "\nParameters:\n"
+            cols = []
             for column in tables.columns:
-                text += f"{column.name}     "
+                cols.append(column.name)
+            text += self.__format_tabular_print(lista = cols, tablefmt = "simple")
         return text
+    
+    def __format_tabular_print(self, lista: list[str], tablefmt: str) -> str:
+        """
+        Function to format the list of strings into a tabular format.
+
+        Parameters
+        ----------
+        lista : list of str
+            The list of strings to format.
+
+        Returns
+        -------
+        str
+            The formatted string.
+        """
+        from tabulate import tabulate
+        max_len: int = len(max(lista, key=len))
+        terminal_min_size: int = 80
+        ncols: int
+        if terminal_min_size/max_len <1.5:
+            ncols = 2
+        else:
+            from math import ceil
+            ncols = ceil(terminal_min_size/max_len)
+        righe: list[str] = [lista[i:i+ncols] for i in range(0, len(lista), ncols)]
+        tabula: str = tabulate(righe, tablefmt=tablefmt)
+        return tabula
