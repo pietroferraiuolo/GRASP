@@ -19,34 +19,40 @@ Just import the module
 
 import numpy as _np
 import seaborn as sns
+from grasp import types as _T
 import matplotlib.pyplot as _plt
 from grasp.core import osutils as _osu
 from grasp.stats import fit_distribution as _kde_estimator
-from typing import Optional as _Optional, Union as _Union, Callable as _Callable
 from grasp.analyzers._Rcode.r2py_models import (
     _kde_labels,
     RegressionModel as _RegressionModel,
     PyRegressionModel as _FakeRegModel,
 )
 
-label_font = {
+label_font: dict[str,str|int] = {
     "family": "serif",
     "color": "black",
     "weight": "normal",
     "size": 15,
 }
-title_font = {
+title_font: dict[str,str|int] = {
     "family": "serif",
-    #"style": "italic",
+    # "style": "italic",
     "color": "black",
     "weight": "semibold",
     "size": 20,
 }
 
-default_figure_size = (6.4, 5.2)
+default_figure_size: tuple[float,float] = (6.4, 5.2)
 
 
-def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: bool = False, kde_kind: str = "gaussian", **kwargs):
+def doubleHistScatter(
+    x: _T.Array,
+    y: _T.Array,
+    kde: bool = False,
+    kde_kind: str = "gaussian",
+    **kwargs: dict[str,_T.Any],
+):
     """
     Make a 2D scatter plot of two data arrays, with the respective histogram distributions
     projected on each axis. The kde option allows for regression on the plotted data.
@@ -75,37 +81,37 @@ def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: boo
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
-        bins : int, list, str
-            Number of bins for the histograms.<br>
-            If `int`it's the number of equal-width bins.<br>
-            If `list` it's the bin edges.<br>
-            If a `str`, options are 'knuth` (default) for the Knuth method,
-            while 'detailed' for a fast estimate of the number of bins, done
-            computing the number of bins as 1.5*sqrt(N).
-        xlabel : str
-            Label of the x-axis.
-        ylabel : str
-            Label of the y-axis.
-        title : str
-            Title of the figure.
-        alpha : float
-            Transparency of the data points of the scatter.
-        colorx : str
-            Color of the histogram on x-axis.
-        colory : str
-            Color of the histogram on y-axis.
-        scatter_color : str
-            Color of the scattered dots.
-        size : int or float
-            Size of the scattered data points.
-        figsize : tuple
-            Size of the figure.
-        bins : int
-            Number of bins for the histogram.
-        xlim : tuple
-            Limits for the x-axis.
-        ylim : tuple
-            Limits for the y-axis.
+    bins : int, list, str
+        Number of bins for the histograms.<br>
+        If `int`it's the number of equal-width bins.<br>
+        If `list` it's the bin edges.<br>
+        If a `str`, options are 'knuth` (default) for the Knuth method,
+        while 'detailed' for a fast estimate of the number of bins, done
+        computing the number of bins as 1.5*sqrt(N).
+    xlabel : str
+        Label of the x-axis.
+    ylabel : str
+        Label of the y-axis.
+    title : str
+        Title of the figure.
+    alpha : float
+        Transparency of the data points of the scatter.
+    colorx : str
+        Color of the histogram on x-axis.
+    colory : str
+        Color of the histogram on y-axis.
+    scatter_color : str
+        Color of the scattered dots.
+    size : int or float
+        Size of the scattered data points.
+    figsize : tuple
+        Size of the figure.
+    bins : int
+        Number of bins for the histogram.
+    xlim : tuple
+        Limits for the x-axis.
+    ylim : tuple
+        Limits for the y-axis.
 
     """
     title = kwargs.get("title", "")
@@ -119,7 +125,7 @@ def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: boo
     sc = kwargs.get("scatter_color", "black")
     s = _osu.get_kwargs(("size", "s"), 5, kwargs)
     fsize = kwargs.get("figsize", (5.6, 5.2))
-    n_bins = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    n_bins = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
         _, n_bins = knuth_bin_width(x, return_bins=True)
@@ -152,7 +158,9 @@ def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: boo
     ax.set_xlabel(xlabel, fontdict=label_font)
     ax.set_ylabel(ylabel, fontdict=label_font)
     hx = ax_histx.hist(x, bins=n_bins, color=colorx, alpha=0.6)
-    hy = ax_histy.hist(y, bins=n_bins, orientation="horizontal", color=colory, alpha=0.6)
+    hy = ax_histy.hist(
+        y, bins=n_bins, orientation="horizontal", color=colory, alpha=0.6
+    )
     _plt.suptitle(title, size=20, style="italic", family="cursive")
     ax_histx.set_xlim(xlim)
     ax_histy.set_ylim(ylim)
@@ -162,8 +170,8 @@ def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: boo
     ax_histy.set_xticks(_np.arange(hy[0].max(), hy[0].max() + 1, 1))
     ax_histx.set_yticks(_np.arange(hx[0].max(), hx[0].max() + 1, 1))
     if kde:
-        reg_x = _kde_estimator(x, kde_kind, n_bins)
-        reg_y = _kde_estimator(y, kde_kind, n_bins)
+        reg_x = _kde_estimator(data=x, bins=n_bins, method=kde_kind)
+        reg_y = _kde_estimator(data=y, bins=n_bins, method=kde_kind)
         ax_histx.plot(
             reg_x.x,
             reg_x.y,
@@ -182,11 +190,11 @@ def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: boo
 
 
 def colorMagnitude(
-    sample = None, 
-    g: float | _np.typing.ArrayLike = None, 
-    b_r: float | _np.typing.ArrayLike = None, 
-    teff_gspphot: float | _np.typing.ArrayLike = None, 
-    **kwargs
+    sample: _T.Optional[_T.TabularData] = None,
+    g: _T.Optional[_T.Array] = None,
+    b_r: _T.Optional[_T.Array] = None,
+    teff_gspphot: _T.Optional[_T.Array] = None,
+    **kwargs: dict[str,_T.Any],
 ):
     """
     Make a scatter plot to create a color-magnitude diagram of the sample, using
@@ -209,16 +217,16 @@ def colorMagnitude(
     Other Parameters
     ----------------
     **kwargs : dict
-        bgc : tuple
-            A tuple with three float values, indicating the RGB gradient which
-            define a color (placeholder for the ax.set_facecolor function).
-            Aliases: 'bgc', 'bgcolor', 'background_color'.
-        alpha : float
-            Transparency of the scatter points.
-        cmap : str
-            All accepted matplotlib colormap strings.
-        figsize : tuple
-            Size of the figure.
+    bgc : tuple
+        A tuple with three float values, indicating the RGB gradient which
+        define a color (placeholder for the ax.set_facecolor function).
+        Aliases: 'bgc', 'bgcolor', 'background_color'.
+    alpha : float
+        Transparency of the scatter points.
+    cmap : str
+        All accepted matplotlib colormap strings.
+    figsize : tuple
+        Size of the figure.
 
     """
     bgc = _osu.get_kwargs(
@@ -244,7 +252,7 @@ def colorMagnitude(
     _plt.show()
 
 
-def properMotion(sample, **kwargs):
+def properMotion(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     """
     Make a scatter plot in the proper motion space of the sample.
 
@@ -256,14 +264,14 @@ def properMotion(sample, **kwargs):
     Other Parameters
     ----------------
     **kwargs : additional parameters for customizing the plot.
-        color : str os ArrayLike
-            Color of the scattered data points.
-        s : int or float
-            Size of the scattered data points.
-        alpha : float
-            Transparency of the scattered data points.
-        figsize : tuple
-            Size of the figure.
+    color : str os ArrayLike
+        Color of the scattered data points.
+    s : int or float
+        Size of the scattered data points.
+    alpha : float
+        Transparency of the scattered data points.
+    figsize : tuple
+        Size of the figure.
 
     """
     col = _osu.get_kwargs(("color", "c"), "black", kwargs)
@@ -281,7 +289,7 @@ def properMotion(sample, **kwargs):
     _plt.show()
 
 
-def spatial(sample, **kwargs):
+def spatial(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     """
     Make a scatter plot in the spatial plot, that is in the Ra-Dec plane.
 
@@ -334,7 +342,13 @@ def spatial(sample, **kwargs):
     _plt.show()
 
 
-def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **kwargs):
+def histogram(
+    data: _T.Array,
+    kde: bool = False,
+    kde_kind: str = "gaussian",
+    out: bool = False,
+    **kwargs: dict[str,_T.Any],
+):
     """
     Plots the data distribution with a histogram. The number of bins is defined
     as 1.5*sqrt(N). If kde is True, the kernel density estimation will be
@@ -364,32 +378,32 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
-        bins : int, list, str
-            Number of bins for the histogram.<br>
-            If `int`it's the number of equal-width bins.<br>
-            If `list` it's the bin edges.<br>
-            If a `str`, options are 'knuth` (default) for the Knuth method,
-            while 'detailed' for a fast estimate of the number of bins, done
-            computing the number of bins as 1.5*sqrt(N).
-        title : str
-            Title of the plot.
-        kde_verbose : bool
-            If True, the kde iteration will be printed.
-        xlabel : str
-            Label of the plot's x-axis.
-        alpha : float
-            Transparency of the bins.
-        hcolor : str
-            Color of the histogram's bins.
-        kcolor : str
-            Color of the kde curve.
-        figsize : tuple
-            Size of the figure.
-        xlim : tuple
-            Limits for the x-axis.
-        scale : str
-            Scale of the y-axis. Options: 'linear', 'log'.
-            Default is 'linear'.
+    bins : int, list, str
+        Number of bins for the histogram.<br>
+        If `int`it's the number of equal-width bins.<br>
+        If `list` it's the bin edges.<br>
+        If a `str`, options are 'knuth` (default) for the Knuth method,
+        while 'detailed' for a fast estimate of the number of bins, done
+        computing the number of bins as 1.5*sqrt(N).
+    title : str
+        Title of the plot.
+    kde_verbose : bool
+        If True, the kde iteration will be printed.
+    xlabel : str
+        Label of the plot's x-axis.
+    alpha : float
+        Transparency of the bins.
+    hcolor : str
+        Color of the histogram's bins.
+    kcolor : str
+        Color of the kde curve.
+    figsize : tuple
+        Size of the figure.
+    xlim : tuple
+        Limits for the x-axis.
+    scale : str
+        Scale of the y-axis. Options: 'linear', 'log'.
+        Default is 'linear'.
 
     Returns
     -------
@@ -430,7 +444,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
             raise TypeError("'xlim' arg must be a tuple")
     else:
         xlim = None
-    n_bins = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    n_bins = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
         _, n_bins = knuth_bin_width(data, return_bins=True)
@@ -446,7 +460,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     counts = h[0]
     res = {"h": {"counts": counts, "bins": bins}}
     if kde:
-        regression = _kde_estimator(data, kde_kind, n_bins, verbose=verbose)
+        regression = _kde_estimator(data=data, bins=n_bins, method=kde_kind, verbose=verbose)
         res["kde"] = regression.coeffs
         label = _kde_labels(kde_kind, regression.coeffs)
         _plt.plot(regression.x, regression.y, c=kcolor, label=label)
@@ -454,11 +468,15 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     if xlim is not None:
         _plt.xlim(xlim)
     _plt.show()
-    if out:
-        return res
+    return res if out else None
 
 
-def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwargs):
+def scatterXHist(
+    x: _T.Array,
+    y: _T.Array,
+    xerr: _T.Optional[float | _T.Array] = None,
+    **kwargs: dict[str,_T.Any],
+) -> list[float, float]:
     """
     Make a scatter plot of a quantity 'x', with its projected histogram, relative
     to a quantity 'y'.
@@ -476,25 +494,25 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     Other Parameters
     ----------------
     **kwargs : additional arguments for customizing the plot.
-        bins : int, list, str
-            Number of bins for the histogram.<br>
-            If `int`it's the number of equal-width bins.<br>
-            If `list` it's the bin edges.<br>
-            If a `str`, options are 'knuth` (default) for the Knuth method,
-            while 'detailed' for a fast estimate of the number of bins, done
-            computing the number of bins as 1.5*sqrt(N).
-        xlabel : str
-            Label on x axis. The default is 'x'.
-        ylabel : str
-            Label on y axis. The default is 'y'.
-        title : str
-            Title of the figure. Default is 'x distribution'
-        color | c: str
-            Color of the scattered data points.
-        size : int or float
-            Size of the scattered data points.
-        figsize : tuple
-            Size of the figure.
+    bins : int, list, str
+        Number of bins for the histogram.<br>
+        If `int`it's the number of equal-width bins.<br>
+        If `list` it's the bin edges.<br>
+        If a `str`, options are 'knuth` (default) for the Knuth method,
+        while 'detailed' for a fast estimate of the number of bins, done
+        computing the number of bins as 1.5*sqrt(N).
+    xlabel : str
+        Label on x axis. The default is 'x'.
+    ylabel : str
+        Label on y axis. The default is 'y'.
+    title : str
+        Title of the figure. Default is 'x distribution'
+    color | c: str
+        Color of the scattered data points.
+    size : int or float
+        Size of the scattered data points.
+    figsize : tuple
+        Size of the figure.
 
     Returns
     -------
@@ -509,9 +527,10 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     s = _osu.get_kwargs(("s", "size"), 7.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
     title = kwargs.get("title", xlabel + " distribution")
-    nb2 = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    nb2 = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
     if nb2 == "knuth":
         from astropy.stats import knuth_bin_width
+
         _, nb2 = knuth_bin_width(x, return_bins=True)
     elif nb2 == "detailed":
         nb2 = int(1.5 * _np.sqrt(len(x)))
@@ -574,7 +593,13 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     return [mean_x, err_xm]
 
 
-def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
+def errorbar(
+    data: _T.Array,
+    dataerr: _T.Array,
+    x: _T.Array = None,
+    xerr: _T.Optional[_T.Array] = None,
+    **kwargs: dict[str,_T.Any],
+):
     """
     Plot data with error bars.
 
@@ -591,8 +616,9 @@ def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
     xerr : ndarray, optional
         Errors associated with the x-axis data. The default is None.
 
-    ### kwargs : Additional callbacks for matplotlib (see matplotlib.pyplot.errorbar documentation).
-
+    Other Parameters
+    ----------------
+    **kwargs : Additional callbacks for matplotlib (see matplotlib.pyplot.errorbar documentation).
     fmt : str
         Scatter point shape.
     color : str
@@ -656,11 +682,11 @@ def errorbar(data, dataerr, x=None, xerr=None, **kwargs):
 
 
 def regressionPlot(
-    regression_model: _RegressionModel | _FakeRegModel | _Callable | str,
-    x_data: _np.ndarray | list = None,
-    y_data: _np.ndarray | list = None,
+    regression_model: _T.RegressionModels | _T.FittingFunc,
+    x_data: _T.Optional[_T.Array] = None,
+    y_data: _T.Optional[_T.Array] = None,
     f_type: str = "distribution",
-    **kwargs,
+    **kwargs: dict[str,_T.Any],
 ):
     """
     Plot the regression model with the data and residuals.
@@ -669,8 +695,10 @@ def regressionPlot(
     ----------
     regression_model : grasp.r2py_models.RegressionModel or str or callable
         The regression model to be plotted. You can either pass the already fitted
-        model or a string indicating the kind of regression to be fitted. The
-        available options are:
+        model or a string indicating the kind of regression to be fitted. If a
+        callable is passed, it must be a function that takes the data as input and
+        returns the fitted model. See `grasp.starts.fit_data` documentation for 
+        more information.The available string options are:
         - 'gaussian'
         - 'boltzmann'
         - 'exponential'
@@ -679,10 +707,7 @@ def regressionPlot(
         - 'maxwell'
         - 'lorentzian'
         - 'lognormal'
-        - 'power'
-        If you pass a callable, it must be a function that takes the data as
-        input and returns the fitted model. See `grasp.starts.fit_data` documentation
-        for more information.
+        - 'power' 
     x : ndarray or list, optional
         The indipendent variable data to be plotted. If not given, it will be
         simply be an array of the same size as the y data.
@@ -692,42 +717,42 @@ def regressionPlot(
         becomes the kind of regression to be performed.
     f_type : str, optional
         The type of algorithm to use for regression. Options are
-            'distribution': the distribution (histogram) of the data is fitted
-            'datapoint': the data points are fitted
+        - 'distribution': the distribution (histogram) of the data is fitted
+        - 'datapoint': the data points are fitted
         Default is 'distribution'.
 
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
-        figsize : tuple
-            Size of the figure.
-        xlim : tuple
-            Limits for the x-axis.
-        xlabel : str
-            Label of the x-axis.
-        title : str
-            Title of the figure.
-        fmt : str
-            Main plot style. Only works when passing a linear regression
-            model. Default is '-' (normal "solid" plot).
-        size : int or float
-            Size of the scattered data points in both plots.
-            Alias: 's'.
-        plot_color : str
-            Color of the data plot. Aliases:
-            - 'pcolor'
-            - 'plotcolor'
-            - 'pc'
-        fit_color : str
-            Color of the regression plot. Aliases:
-            - 'fcolor'
-            - 'fitcolor'
-            - 'fc'
-        residuals_color : str
-            Color of the residuals. Aliases:
-            - 'rcolor'
-            - 'rescolor'
-            - 'rc'
+    figsize : tuple
+        Size of the figure.
+    xlim : tuple
+        Limits for the x-axis.
+    xlabel : str
+        Label of the x-axis.
+    title : str
+        Title of the figure.
+    fmt : str
+        Main plot style. Only works when passing a linear regression
+        model. Default is '-' (normal "solid" plot).
+    size : int or float
+        Size of the scattered data points in both plots.
+        Alias: 's'.
+    plot_color : str
+        Color of the data plot. Aliases:
+        - 'pcolor'
+        - 'plotcolor'
+        - 'pc'
+    fit_color : str
+        Color of the regression plot. Aliases:
+        - 'fcolor'
+        - 'fitcolor'
+        - 'fc'
+    residuals_color : str
+        Color of the residuals. Aliases:
+        - 'rcolor'
+        - 'rescolor'
+        - 'rc'
 
     """
     rm = _get_regression_model(regression_model, y_data, x_data, f_type)
@@ -794,7 +819,7 @@ def regressionPlot(
     _plt.show()
 
 
-def seaborn(which: str, *args, **kwargs):
+def seaborn(which: str, *args: tuple[str,_T.Any], **kwargs: dict[str,_T.Any]):
     """
     Wrapper to make a seaborn plot.
 
@@ -816,7 +841,7 @@ def seaborn(which: str, *args, **kwargs):
     plot_call(*args, **kwargs)
 
 
-def _get_regression_model(regression_model, y_data, x_data, which):
+def _get_regression_model(regression_model: _T.RegressionModels, y_data: _T.Array, x_data: _T.Array, which: str) -> _T.RegressionModels:
     """
     Get the regression model to be used for the plot.
 
@@ -835,7 +860,10 @@ def _get_regression_model(regression_model, y_data, x_data, which):
                 rm = model
             elif which == "datapoint":
                 from grasp.stats import fit_data_points
-                fit = fit_data_points(data=y_data, x_data=x_data, method=regression_model)
+
+                fit = fit_data_points(
+                    data=y_data, x_data=x_data, method=regression_model
+                )
                 fit = _FakeRegModel(fit, regression_model)
                 rm = fit
         else:
@@ -844,6 +872,6 @@ def _get_regression_model(regression_model, y_data, x_data, which):
             )
     else:
         raise ValueError(
-            "You must either provide a fitted RegressionModel of `y` data to be fitted with the `regression model` argument as a string or a callable."
+            "You must provide either a fitted RegressionModel, or the `y` data to be fitted with the `regression model` argument as a string or a callable."
         )
     return rm

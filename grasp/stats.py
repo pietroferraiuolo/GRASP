@@ -17,14 +17,16 @@ import os as _os
 import numpy as _np
 import time as _time
 import pandas as _pd
-import rpy2.robjects as _ro
-from typing import Callable
-from numpy.typing import ArrayLike as _AL
+from grasp import types as _T
 from astropy.table import Table as _Table
 from astroML.density_estimation import XDGMM
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
-from grasp.analyzers._Rcode import check_packages as _checkRpackages, r2py_models as _rm
+from grasp.analyzers._Rcode import (
+    check_packages as _checkRpackages, 
+    r2py_models as _rm
+)
 from scipy.optimize import curve_fit
+import rpy2.robjects as _ro
 from rpy2.robjects import (
     r as _R,
     numpy2ri as _np2r,
@@ -33,7 +35,12 @@ from rpy2.robjects import (
 )
 
 
-def XD_estimator(data, errors, correlations=None, *xdargs):
+def XD_estimator(
+    data: _T.Array,
+    errors: _T.Array,
+    correlations: _T.Optional[dict[tuple[int, int], _T.Array]] = None,
+    *xdargs: tuple[str, ...],
+):
     """
     Extreme Deconvolution Estimation function.
 
@@ -74,10 +81,10 @@ def XD_estimator(data, errors, correlations=None, *xdargs):
 
 
 def gaussian_mixture_model(
-    train_data: list[float] | _AL,
-    fit_data: list[float] | _AL = None,
-    **kwargs,
-) -> _rm.GaussianMixtureModel:
+    train_data: _T.Array,
+    fit_data: _T.Optional[_T.Array] = None,
+    **kwargs: dict[str, _T.Any],
+) -> _T.GMModel:
     """
     Gaussian Mixture Estimation function.
 
@@ -130,11 +137,11 @@ def gaussian_mixture_model(
 
 
 def fit(
-    data: list | _AL,
-    method: str | Callable = "gaussian",
+    data: _T.Array,
+    method: _T.FittingFunc = "gaussian",
     fit_type: str = "distribution",
-    **kwargs
-) -> _rm.RegressionModel | _rm.PyRegressionModel:
+    **kwargs: dict[str, _T.Any],
+) -> _T.RegressionModels:
     """
     General fitting function that combines distribution fitting and raw data fitting.
 
@@ -163,7 +170,7 @@ def fit(
         - "lorentzian",
         - "rayleigh",
 
-        Only for the `datapoint`, a custom fitting function can be passed as a 
+        Only for the `datapoint`, a custom fitting function can be passed as a
         callable. Also, the fitting type:<br>
         - "polyN" (where N is the degree of the polynomial)
 
@@ -180,7 +187,7 @@ def fit(
         The function can also be a `lambda` function.
     fit_type : str, optional
         The type of fitting to perform. Options are:
-        - "distribution": Fits the data's distribution, performing a KDE 
+        - "distribution": Fits the data's distribution, performing a KDE
             (calls `fit_distribution`).
         - "datapoint": Fits the data points (calls `fit_points`).
     **kwargs : optional
@@ -198,16 +205,18 @@ def fit(
     elif fit_type == "datapoint":
         return fit_data_points(data=data, method=method, **kwargs)
     else:
-        raise ValueError(f"Invalid fit_type: {fit_type}. Choose 'distribution' or 'datapoint'.")
+        raise ValueError(
+            f"Invalid fit_type: {fit_type}. Choose 'distribution' or 'datapoint'."
+        )
 
 
 def fit_distribution(
-    data: list[float] | _AL,
-    bins: int | _AL | str = 'detailed',
+    data: _T.Array,
+    bins: str|int|_T.Array = "detailed",
     method: str = "gaussian",
     verbose: bool = True,
     plot: bool = False,
-) -> _rm.RegressionModel:
+) -> _T.RRegressionModel:
     """
     Regression model estimation function.
 
@@ -260,6 +269,17 @@ def fit_distribution(
         regression_model = reg_func(r_data, verb=verbose)
     else:
         reg_func = _genv["regression"]
+        if isinstance(bins, str) and bins == "knuth":
+            print("knuth?")
+            from astropy.stats import knuth_bin_width
+            _,bins = knuth_bin_width(data, return_bins=True)
+            bins = _np2r.numpy2rpy(bins)
+        elif isinstance(bins, int):
+            print("int?")
+            bins = _ro.IntVector([bins])
+        elif isinstance(bins, (list,_np.ndarray)):
+            print("array?")
+            bins = _np2r.numpy2rpy(bins)
         r_data = _np2r.numpy2rpy(data)
         regression_model = reg_func(r_data, method=method, bins=bins, verb=verbose)
     model = _rm.RegressionModel(regression_model, kind=method)
@@ -271,12 +291,12 @@ def fit_distribution(
 
 
 def fit_data_points(
-    data: list[float] | _AL = None,
-    x_data: list[float] | _AL = None,
-    method: str | Callable[..., float] = "linear",
+    data: _T.Optional[_T.Array] = None,
+    x_data: _T.Optional[_T.Array] = None,
+    method: _T.FittingFunc = "linear",
     plot: bool = False,
-    *curvefit_args,
-) -> _rm.PyRegressionModel:
+    *curvefit_args: tuple[str, ...],
+) -> _T.RegressionModels:
     """
     This function fits the imput **data** (not its distribution, see `regression`)
     to an analythical function.
@@ -362,6 +382,7 @@ def fit_data_points(
     )
     if method_is_str and "poly" in method:
         from numpy import polyfit, polyval
+
         try:
             degree = int(method[-2:])
         except ValueError:
@@ -379,7 +400,7 @@ def fit_data_points(
         }
         model = _rm.PyRegressionModel(fitted, f"{degree}-degree polynomial")
     else:
-        f = method if isinstance(method, Callable) else _get_function(method)
+        f = method if callable(method) else _get_function(method)
         if not callable(f):
             raise ValueError(
                 f"The provided function argument `f` must be either a string or a callable: {type(f)}"
@@ -400,11 +421,12 @@ def fit_data_points(
         model = _rm.PyRegressionModel(fitted, kind)
     if plot:
         from grasp.plots import regressionPlot
+
         regressionPlot(model, f_type="datapoint")
     return model
 
 
-def _get_function(name: str) -> Callable[..., float]:
+def _get_function(name: str): # -> _T.FittingFunc[..., float]:
     """
     This function returns the function corresponding to the provided name.
     The function must be defined in the `grasp.stats` module.
@@ -452,14 +474,14 @@ def _get_function(name: str) -> Callable[..., float]:
     return functions.get(name)
 
 
-def _data_format_check(data):
+def _data_format_check(data: _T.Array | _T.TabularData) -> _T.Array:
     """
     Function which checks and formats the input data to be ready
     for the XDGMM model fit.
 
     Parameters:
     ----------
-    data : numpy.ndarray, list, astropy.table.Table, pandas.DataFrame
+    data : ArrayLike, astropy.table.Table, pandas.DataFrame
         The data whose format has to be checked.
 
     Returns:
@@ -475,7 +497,9 @@ def _data_format_check(data):
     return data
 
 
-def _construct_covariance_matrices(errors, correlations: dict):
+def _construct_covariance_matrices(
+    errors: _T.Array, correlations: dict[tuple[int, int], _T.Array]
+) -> _T.Array:
     """
     Constructs covariance matrices for each sample based on given errors and correlations.
 

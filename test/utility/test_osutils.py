@@ -1,7 +1,7 @@
 import unittest
 import os
 from unittest.mock import patch
-from astropy.table import QTable
+from astropy.table import Table
 from grasp.core import osutils as osu
 from grasp.core import folder_paths as fn
 import numpy as np
@@ -15,7 +15,7 @@ class TestOsutils(unittest.TestCase):
         mock_findTracknum.return_value = '/mock/path'
 
         # Mock the QTable.read function
-        mock_table = QTable(names=('col1', 'col2'), rows=[(1, 2), (3, 4)])
+        mock_table = Table(names=('col1', 'col2'), rows=[(1, 2), (3, 4)])
         mock_read.return_value = mock_table
 
         # Test the load_data function
