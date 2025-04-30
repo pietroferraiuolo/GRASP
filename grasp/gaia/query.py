@@ -521,6 +521,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         self._queryInfo["Flag"]["Query"] = "radial velocity"
         return rv_sample
 
+
     def _run_query(
         self,
         gc_id: str,
@@ -568,10 +569,11 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
 {check[1]}.
 Loading it..."""
             )
-            sample = _loadData(name=check[1], as_sample=False)
+            sample = _loadData(tn=check[1], as_sample=False)
             self.last_result = check[1]
             print(f"Sample number of sources: {len(sample):d}")
         return sample
+
 
     def _saveQuery(self, dat: _Table | _QTable | _Any, name: str):
         """
@@ -611,6 +613,7 @@ Loading it..."""
             config.write(configfile)
         print(data)
         print(info)
+
 
     def _writeHeader(self, data: _Table | _QTable, name: str) -> _Table | _QTable:
         """
@@ -658,6 +661,7 @@ Loading it..."""
             data.meta[key] = value
         return data
 
+
     def _checkPathExist(self, dest: str) -> str:
         """
         Check if the path exists, and if not creates it.
@@ -673,6 +677,7 @@ Loading it..."""
             _os.makedirs(self._fold)
             print(f"Path '{self._fold}' did not exist. Created.")
         return self._fold
+
 
     def _formatCheck(
         self, data: str | list[str], conditions: str | list[str]
@@ -729,6 +734,7 @@ Loading it..."""
                     )
                 cond += conditions[-1]
         return dat, cond
+
 
     def _adqlWriter(
         self,

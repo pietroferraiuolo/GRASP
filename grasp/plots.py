@@ -46,7 +46,7 @@ title_font = {
 default_figure_size = (6.4, 5.2)
 
 
-def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
+def doubleHistScatter(x: _np.typing.ArrayLike, y: _np.typing.ArrayLike, kde: bool = False, kde_kind: str = "gaussian", **kwargs):
     """
     Make a 2D scatter plot of two data arrays, with the respective histogram distributions
     projected on each axis. The kde option allows for regression on the plotted data.
@@ -75,6 +75,13 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
+        bins : int, list, str
+            Number of bins for the histograms.<br>
+            If `int`it's the number of equal-width bins.<br>
+            If `list` it's the bin edges.<br>
+            If a `str`, options are 'knuth` (default) for the Knuth method,
+            while 'detailed' for a fast estimate of the number of bins, done
+            computing the number of bins as 1.5*sqrt(N).
         xlabel : str
             Label of the x-axis.
         ylabel : str
@@ -101,10 +108,6 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
             Limits for the y-axis.
 
     """
-    # xmin = _np.nanmin(x)
-    # xmax = _np.nanmax(x)
-    # ymin = _np.nanmin(y)
-    # ymax = _np.nanmax(y)
     title = kwargs.get("title", "")
     xlabel = kwargs.get("xlabel", "")
     ylabel = kwargs.get("ylabel", "")
@@ -116,7 +119,12 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     sc = kwargs.get("scatter_color", "black")
     s = _osu.get_kwargs(("size", "s"), 5, kwargs)
     fsize = kwargs.get("figsize", (5.6, 5.2))
-    bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(x))))
+    n_bins = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    if n_bins == "knuth":
+        from astropy.stats import knuth_bin_width
+        _, n_bins = knuth_bin_width(x, return_bins=True)
+    elif n_bins == "detailed":
+        n_bins = int(1.5 * _np.sqrt(len(x)))
     fig = _plt.figure(figsize=fsize)
     gs = fig.add_gridspec(
         nrows=2,
@@ -143,8 +151,8 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     ax_histy.set_xlabel("Counts\n")
     ax.set_xlabel(xlabel, fontdict=label_font)
     ax.set_ylabel(ylabel, fontdict=label_font)
-    hx = ax_histx.hist(x, bins=bins, color=colorx, alpha=0.6)
-    hy = ax_histy.hist(y, bins=bins, orientation="horizontal", color=colory, alpha=0.6)
+    hx = ax_histx.hist(x, bins=n_bins, color=colorx, alpha=0.6)
+    hy = ax_histy.hist(y, bins=n_bins, orientation="horizontal", color=colory, alpha=0.6)
     _plt.suptitle(title, size=20, style="italic", family="cursive")
     ax_histx.set_xlim(xlim)
     ax_histy.set_ylim(ylim)
@@ -154,8 +162,8 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     ax_histy.set_xticks(_np.arange(hy[0].max(), hy[0].max() + 1, 1))
     ax_histx.set_yticks(_np.arange(hx[0].max(), hx[0].max() + 1, 1))
     if kde:
-        reg_x = _kde_estimator(x, kde_kind)
-        reg_y = _kde_estimator(y, kde_kind)
+        reg_x = _kde_estimator(x, kde_kind, n_bins)
+        reg_y = _kde_estimator(y, kde_kind, n_bins)
         ax_histx.plot(
             reg_x.x,
             reg_x.y,
@@ -173,14 +181,20 @@ def doubleHistScatter(x, y, kde=False, kde_kind: str = "gaussian", **kwargs):
     _plt.show()
 
 
-def colorMagnitude(sample=None, g=None, b_r=None, teff_gspphot=None, **kwargs):
+def colorMagnitude(
+    sample = None, 
+    g: float | _np.typing.ArrayLike = None, 
+    b_r: float | _np.typing.ArrayLike = None, 
+    teff_gspphot: float | _np.typing.ArrayLike = None, 
+    **kwargs
+):
     """
     Make a scatter plot to create a color-magnitude diagram of the sample, using
     BP and RP photometry and temperature information.
 
     Parameters
     ----------
-    sample : _Sample or dict
+    sample : Sample or dict
         The sample data containing 'phot_g_mean_mag', 'bp_rp' and 'teff_gspphot'
         fields. If no sample is provided, the data fields must be provided.
     g : float | ArrayLike
@@ -350,8 +364,13 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     Other Parameters
     ----------------
     **kwargs : Additional parameters for customizing the plot.
-        bins : int
-            Number of bins for the histogram.
+        bins : int, list, str
+            Number of bins for the histogram.<br>
+            If `int`it's the number of equal-width bins.<br>
+            If `list` it's the bin edges.<br>
+            If a `str`, options are 'knuth` (default) for the Knuth method,
+            while 'detailed' for a fast estimate of the number of bins, done
+            computing the number of bins as 1.5*sqrt(N).
         title : str
             Title of the plot.
         kde_verbose : bool
@@ -404,7 +423,6 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
     if scale == "log":
         xlabel = "log() " + xlabel + " )"
-    bins = kwargs.get("bins", int(1.5 * _np.sqrt(len(data))))
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
             xlim = kwargs["xlim"]
@@ -412,9 +430,14 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
             raise TypeError("'xlim' arg must be a tuple")
     else:
         xlim = None
-    n_bin = int(1.5 * _np.sqrt(len(data)))
+    n_bins = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    if n_bins == "knuth":
+        from astropy.stats import knuth_bin_width
+        _, n_bins = knuth_bin_width(data, return_bins=True)
+    elif n_bins == "detailed":
+        n_bins = int(1.5 * _np.sqrt(len(data)))
     _plt.figure(figsize=fsize)
-    h = _plt.hist(data, bins=n_bin, color=hcolor, alpha=alpha)
+    h = _plt.hist(data, bins=n_bins, color=hcolor, alpha=alpha)
     _plt.ylabel("counts")
     _plt.yscale(scale)
     _plt.xlabel(xlabel, fontdict=label_font)
@@ -423,7 +446,7 @@ def histogram(data, kde=False, kde_kind: str = "gaussian", out: bool = False, **
     counts = h[0]
     res = {"h": {"counts": counts, "bins": bins}}
     if kde:
-        regression = _kde_estimator(data, kde_kind, verbose=verbose)
+        regression = _kde_estimator(data, kde_kind, n_bins, verbose=verbose)
         res["kde"] = regression.coeffs
         label = _kde_labels(kde_kind, regression.coeffs)
         _plt.plot(regression.x, regression.y, c=kcolor, label=label)
@@ -453,13 +476,20 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     Other Parameters
     ----------------
     **kwargs : additional arguments for customizing the plot.
+        bins : int, list, str
+            Number of bins for the histogram.<br>
+            If `int`it's the number of equal-width bins.<br>
+            If `list` it's the bin edges.<br>
+            If a `str`, options are 'knuth` (default) for the Knuth method,
+            while 'detailed' for a fast estimate of the number of bins, done
+            computing the number of bins as 1.5*sqrt(N).
         xlabel : str
             Label on x axis. The default is 'x'.
         ylabel : str
             Label on y axis. The default is 'y'.
         title : str
             Title of the figure. Default is 'x distribution'
-        color : str
+        color | c: str
             Color of the scattered data points.
         size : int or float
             Size of the scattered data points.
@@ -479,7 +509,12 @@ def scatterXHist(x, y, xerr: _Optional[_Union[float, _np.ndarray]] = None, **kwa
     s = _osu.get_kwargs(("s", "size"), 7.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
     title = kwargs.get("title", xlabel + " distribution")
-    nb2 = int(1.5 * _np.sqrt(len(x)))
+    nb2 = _osu.get_kwargs(("bins", "bin"), 'knuth', kwargs)
+    if nb2 == "knuth":
+        from astropy.stats import knuth_bin_width
+        _, nb2 = knuth_bin_width(x, return_bins=True)
+    elif nb2 == "detailed":
+        nb2 = int(1.5 * _np.sqrt(len(x)))
     mean_x = _np.mean(x)
     fig, (ax0, ax1) = _plt.subplots(
         nrows=2, ncols=1, height_ratios=[1, 3.5], figsize=fsize, sharex=True
