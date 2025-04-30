@@ -1,7 +1,13 @@
 library("minpack.lm")
 
-regression <- function(data, method, verb = FALSE) {
-  N <- seq(min(data), max(data), length.out = ceiling(1.5 * sqrt(length(data))))
+regression <- function(data, method, bins = 'detailed', verb = FALSE) {
+  if (is.character(bins) && bins == 'detailed') {
+    # Use the detailed binning method
+    N <- seq(min(data), max(data), length.out = ceiling(1.5 * sqrt(length(data))))
+} else if (is.numeric(bins)) {
+    # Use the provided bin edges directly
+    N <- bins
+  }
   hist_data <- hist(data, breaks = N, plot = FALSE)
   x <- hist_data$mids  # The midpoint of histogram bins
   y <- hist_data$counts  # The count in each bin
@@ -144,7 +150,7 @@ regression <- function(data, method, verb = FALSE) {
   )
 }
 
-linear_regression <- function(data, method = "linear", verb = FALSE) {
+linear_regression <- function(data, verb = FALSE) {
   # `method` is a dummy argument for the python interface
   fit <- lm(y ~ x, data)
   return(
@@ -153,6 +159,6 @@ linear_regression <- function(data, method = "linear", verb = FALSE) {
          y = fitted(fit),
          coeffs = coef(fit),
          residuals = resid(fit),
-         kind = method)
+         kind = "linear")
   )
 }

@@ -19,6 +19,7 @@ import time as _time
 import pandas as _pd
 import rpy2.robjects as _ro
 from typing import Callable
+from numpy.typing import ArrayLike as _AL
 from astropy.table import Table as _Table
 from astroML.density_estimation import XDGMM
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
@@ -73,8 +74,8 @@ def XD_estimator(data, errors, correlations=None, *xdargs):
 
 
 def gaussian_mixture_model(
-    train_data: list[float] | _np.ndarray,
-    fit_data: list[float] | _np.ndarray = None,
+    train_data: list[float] | _AL,
+    fit_data: list[float] | _AL = None,
     **kwargs,
 ) -> _rm.GaussianMixtureModel:
     """
@@ -129,7 +130,7 @@ def gaussian_mixture_model(
 
 
 def fit(
-    data: list | _np.ndarray,
+    data: list | _AL,
     method: str | Callable = "gaussian",
     fit_type: str = "distribution",
     **kwargs
@@ -201,7 +202,8 @@ def fit(
 
 
 def fit_distribution(
-    data: list | _np.ndarray,
+    data: list[float] | _AL,
+    bins: int | _AL | str = 'detailed',
     method: str = "gaussian",
     verbose: bool = True,
     plot: bool = False,
@@ -243,6 +245,9 @@ def fit_distribution(
     regression_code = _os.path.join(_RSF, "regression.R")
     _R(f'source("{regression_code}")')
     if method == "linear":
+        DeprecationWarning(
+            "The 'linear' method in `fit_distribution is deprecated. Use `grasp.stats.fit_data_points(..., method='linear')` instead."
+        )
         _pd2r.activate()
         reg_func = _genv["linear_regression"]
         D = _np.array(data).shape[-1] if isinstance(data, list) else data.shape[-1]
@@ -252,10 +257,11 @@ def fit_distribution(
             data = _pd.DataFrame({"x": x, "y": y})
         r_data = _pd2r.py2rpy_pandasdataframe(data)
         _pd2r.deactivate()
+        regression_model = reg_func(r_data, verb=verbose)
     else:
         reg_func = _genv["regression"]
         r_data = _np2r.numpy2rpy(data)
-    regression_model = reg_func(r_data, method=method, verb=verbose)
+        regression_model = reg_func(r_data, method=method, bins=bins, verb=verbose)
     model = _rm.RegressionModel(regression_model, kind=method)
     _np2r.deactivate()
     if plot:
@@ -265,9 +271,9 @@ def fit_distribution(
 
 
 def fit_data_points(
-    data: list | _np.ndarray = None,
-    x_data: list | _np.ndarray = None,
-    method: str | Callable = "linear",
+    data: list[float] | _AL = None,
+    x_data: list[float] | _AL = None,
+    method: str | Callable[..., float] = "linear",
     plot: bool = False,
     *curvefit_args,
 ) -> _rm.PyRegressionModel:
@@ -398,7 +404,7 @@ def fit_data_points(
     return model
 
 
-def _get_function(name: str):
+def _get_function(name: str) -> Callable[..., float]:
     """
     This function returns the function corresponding to the provided name.
     The function must be defined in the `grasp.stats` module.
