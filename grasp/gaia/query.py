@@ -62,18 +62,11 @@ object:
 """
 
 import os as _os
-from typing import (
-    Optional as _Opt,
-    Union as _Union,
-    Any as _Any
-)
-import configparser as _cp
 import numpy as _np
+import configparser as _cp
+from grasp import types as _gt
 from astropy import units as _u
 from astroquery.gaia import Gaia as _Gaia
-from grasp._utility.sample import Sample as _Sample
-from grasp._utility.cluster import Cluster as _Cluster
-from astropy.table import Table as _Table, QTable as _QTable
 from grasp.core.osutils import (
     get_kwargs,
     timestamp as _ts,
@@ -90,7 +83,7 @@ _QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
 
 
-def available_tables(key: _Opt[str] = None):
+def available_tables(key: _gt.Optional[str] = None):
     """
     Prints out the complete list of data tables names present in the Gaia archive.
 
@@ -185,7 +178,7 @@ class GaiaQuery:
     """
 
     def __init__(
-        self, gaia_table: _Opt[_Union[str, list[str]]] = "gaiadr3.gaia_source"
+        self, gaia_table: _gt.Optional[_gt.Union[str, list[str]]] = "gaiadr3.gaia_source"
     ):
         """
         The Constructor
@@ -201,7 +194,7 @@ class GaiaQuery:
         self._table = gaia_table
         self._path = _BDP
         self._fold = None
-        self._queryInfo: dict[str, dict[ str, _Any | _u.Quantity | float | str]] = {}
+        self._queryInfo: dict[str,dict[ str,_gt.Any|_u.Quantity|float|str]] = {}
         self._baseQ = """SELECT {data}
 FROM {table}
 WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRCLE('ICRS',{circle}))=1
@@ -228,7 +221,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         """The description"""
         print(self.__descr())
 
-    def free_query(self, adql_cmd: str, save: bool = False):
+    def free_query(self, adql_cmd: str, save: bool = False) -> _gt.AstroTable:
         """
         Function to perform a query with the ADQL language, using the
         GaiaQuery class.
@@ -273,10 +266,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
     def free_gc_query(
         self,
         radius: float,
-        gc: _Opt[_Union[_Cluster, str]] = None,
+        gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs,
-    ):
+        **kwargs: dict[str,_gt.Any],
+    ) -> _gt.TabularData:
         """
         This function allows to perform an ADQL search into the Gaia catalogue with
         personalized parameters, such as data to collect and conditions to apply.
@@ -322,8 +315,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Result of the async query, stored into an astropy table.
 
         """
-        ra: _Opt[float | str] = kwargs.get("ra", None)
-        dec: _Opt[float | str] = kwargs.get("dec", None)
+        from grasp._utility.sample import Sample
+        ra: _gt.Optional[float|str] = kwargs.get("ra", None)
+        dec: _gt.Optional[float|str] = kwargs.get("dec", None)
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
         self._queryInfo = {
@@ -344,16 +338,16 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         else:
             self._queryInfo["Scan Info"]["Conditions Applied"] = cond
         samp = self._run_query(savename, ra, dec, radius, dat, cond, save)
-        sample = _Sample(samp, gc=gc)
+        sample = Sample(samp, gc=gc)
         sample.qinfo = self._queryInfo["Scan Info"]
         return sample
 
     def get_astrometry(
         self,
         radius: float,
-        gc: _Opt[_Union[_Cluster, str]] = None,
+        gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs,
+        **kwargs: dict[str,_gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -406,9 +400,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
     def get_photometry(
         self,
         radius: float,
-        gc: _Opt[_Union[_Cluster, str]] = None,
+        gc:_gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs,
+        **kwargs: dict[str,_gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -462,9 +456,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
     def get_rv(
         self,
         radius: float,
-        gc: _Opt[_Union[_Cluster, str]] = None,
+        gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs,
+        **kwargs: dict[str,_gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -558,7 +552,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         if check is False:
             query = self._adqlWriter(ra, dec, radius, data=data, conditions=cond)
             job = _Gaia.launch_job_async(query)
-            sample: _Table = job.get_results()
+            sample = job.get_results()
             print(f"Sample number of sources: {len(sample):d}")
             self.last_result = sample
             if save:
@@ -575,7 +569,7 @@ Loading it..."""
         return sample
 
 
-    def _saveQuery(self, dat: _Table | _QTable | _Any, name: str):
+    def _saveQuery(self, dat: _gt.TabularData, name: str):
         """
         Routine for saving the query with its information, in the 'query_data.txt'
         and 'query_info.txt' files
@@ -588,6 +582,7 @@ Loading it..."""
             Where to save the data, usually the cluster's name.
 
         """
+        from astropy.table import Table, QTable
         config = _cp.ConfigParser()
         tn = _ts()
         if name.upper() == "UNTRACKEDDATA":
@@ -598,9 +593,9 @@ Loading it..."""
         _os.mkdir(tnfold)
         data = _os.path.join(tnfold, _QDATA)
         info = _os.path.join(tnfold, _QINFO)
-        if any([isinstance(dat, _Table), not isinstance(dat, _QTable)]):
-            dat: _QTable = _QTable(dat)
-        dat: _Table|_QTable = self._writeHeader(dat, name)
+        if any([isinstance(dat, Table), not isinstance(dat, QTable)]):
+            dat = QTable(dat)
+        dat: _gt.AstroTable = self._writeHeader(dat, name)
         dat.write(data, format="fits")
         for section, options in self._queryInfo.items():
             config[section] = options
@@ -615,7 +610,7 @@ Loading it..."""
         print(info)
 
 
-    def _writeHeader(self, data: _Table | _QTable, name: str) -> _Table | _QTable:
+    def _writeHeader(self, data: _gt.AstroTable, name: str) -> _gt.AstroTable:
         """
         Function to write the header of the query info file.
 
@@ -680,8 +675,8 @@ Loading it..."""
 
 
     def _formatCheck(
-        self, data: str | list[str], conditions: str | list[str]
-    ) -> tuple[str, list[str]]:
+        self, data: str|list[str], conditions: str|list[str]
+    ) -> tuple[str,list[str]]:
         """
         Function to check and correct the format the 'data' and 'conditions'
         variables were imput with.
@@ -738,11 +733,11 @@ Loading it..."""
 
     def _adqlWriter(
         self,
-        ra: str | _u.Quantity | float,
-        dec: str | _u.Quantity | float,
-        radius: str | _u.Quantity | float,
-        data: str | list[str],
-        conditions: str | list[str],
+        ra: str|_u.Quantity|float,
+        dec: str|_u.Quantity|float,
+        radius: str|_u.Quantity|float,
+        data: str|list[str],
+        conditions: str|list[str],
     ) -> str:
         """
         This function writes the query, correctly formatting all the variables
@@ -782,8 +777,8 @@ Loading it..."""
         return query
 
     def _get_coordinates(
-        self, gc: _Opt[str | _Cluster], **kwargs: float
-    ) -> tuple[_Cluster, float, float, str]:
+        self, gc: _gt.Optional[_gt.GcInstance], **kwargs: dict[str,_gt.Any]
+    ) -> tuple[_gt.GcInstance, float, float, str]:
         """
         Function to get the coordinates of the cluster, either from the Cluster
         object or from the kwargs.
@@ -805,24 +800,25 @@ Loading it..."""
             Name identifier of the objects, for the data path.
 
         """
+        from grasp._utility.cluster import Cluster
         if gc is None:
             ra: float = kwargs.get("ra", None)
             dec: float = kwargs.get("dec", None)
-            gc: _Cluster = _Cluster(ra=ra, dec=dec)
+            gc: Cluster = Cluster(ra=ra, dec=dec)
             savename: str = kwargs.get("name", "UntrackedData")
         else:
-            if isinstance(gc, _Cluster):
+            if isinstance(gc, Cluster):
                 ra: float = gc.ra
                 dec: float = gc.dec
                 savename: str = gc.id
             elif isinstance(gc, str):
-                gc = _Cluster(gc)
+                gc = Cluster(gc)
                 ra: float = gc.ra
                 dec: float = gc.dec
                 savename: str = gc.id
         return (gc, ra, dec, savename)
 
-    def __check_query_exists(self, name: str) -> bool | tuple[bool, str]:
+    def __check_query_exists(self, name: str) -> bool|tuple[bool, str]:
         """
         Checks wether the requested query already exist saved for the Cluster.
 
