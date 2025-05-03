@@ -16,12 +16,14 @@ import sympy as _sp
 import numpy as _np
 from . import _glpoints
 import multiprocessing as _mp
-from typing import Dict as _Dict, Any as _Any
-from numpy.typing import ArrayLike as _ArrayLike
+from grasp import types as _t
 
 
-def compute_numerical_function(func, variables, var_data):
+def compute_numerical_function(
+    func: _t.AnaliticalFunc, variables: _t.Variables, var_data: list[_t.Array]
+) -> _t.Array:
     """
+
     Compute the numerical value of a function, passing by the function, it's
     variables and the data associated to the variables.
 
@@ -64,13 +66,19 @@ def compute_numerical_function(func, variables, var_data):
     return _np.array(computed_func)
 
 
-def compute_error(err_func, variables, var_data, var_errors, corr_values: list = None):
+def compute_error(
+    err_func: _t.AnaliticalFunc,
+    variables: _t.Variables,
+    var_data: list[_t.Array],
+    var_errors: list[_t.Array],
+    corr_values: _t.Optional[list[_t.Array]] = None,
+) -> _t.Array:
     """
     Numerical computation of the error-formula for the input function.
 
     Parameters
     ----------
-    func : sympy function
+    err_func : sympy function
         The symbolic function for which the error needs to be computed.
     variables : list of sympy symbols
         The list of symbolic variables in the function, both the data and the
@@ -95,7 +103,9 @@ def compute_error(err_func, variables, var_data, var_errors, corr_values: list =
     return computed_error
 
 
-def error_propagation(func, variables, correlation: bool = False) -> _Dict[str, _Any]:
+def error_propagation(
+    func: _t.AnaliticalFunc, variables: _t.Variables, correlation: bool = False
+) -> dict[str, _t.Union[_t.AnalyticalFunc, _t.Variables]]:
     """
     Computes the imput function's error with the standard error propagation
     formula:
@@ -155,9 +165,9 @@ def error_propagation(func, variables, correlation: bool = False) -> _Dict[str, 
     try:
         assert len(corrs) % 2 == 0, "Correlations must be in pairs"
         assert len(corrs) != 0, "No correlation, skipping"
-        assert len(corrs) == len(variables)*(len(variables)-1), (
-            "Correlations not matching the number of variables"
-        )
+        assert len(corrs) == len(variables) * (
+            len(variables) - 1
+        ), "Correlations not matching the number of variables"
         for i in range(0, len(corrs), 2):
             eformula = _sp.nsimplify(error_formula.subs(corrs[i + 1], corrs[i]))
             corrs.pop(i + 1)
@@ -172,7 +182,9 @@ def error_propagation(func, variables, correlation: bool = False) -> _Dict[str, 
     return erp
 
 
-def gaus_legendre_integrator(fnc, a, b, points):
+def gaus_legendre_integrator(
+    fnc: _t.Callable[..., float], a: float, b: float, points: int
+) -> float:
     """
     Integrates the function fcn(x) between a and b using the Gauss-Legendre method.
 
@@ -226,7 +238,9 @@ def gaus_legendre_integrator(fnc, a, b, points):
     return area
 
 
-def _multicore_computation(n_cores, func, val_dicts):
+def _multicore_computation(
+    n_cores: int, func: _t.AnaliticalFunc, val_dicts: list[dict[str, float]]
+) -> _t.Array:
     """
     Computation of the input function using multicore parallelization
 
@@ -251,7 +265,9 @@ def _multicore_computation(n_cores, func, val_dicts):
     return computed_func
 
 
-def _lambdified_computation(func, variables, var_data):
+def _lambdified_computation(
+    func: _t.AnaliticalFunc, variables: _t.Variables, var_data: list[_t.Array]
+) -> _t.Array:
     """
     Compute the input function compiling the sympy expression using numpy, for
     way faster computation.
@@ -280,7 +296,9 @@ def _lambdified_computation(func, variables, var_data):
     return computed_func
 
 
-def _data_dict_creation(variables, var_data: _ArrayLike):
+def _data_dict_creation(
+    variables: _t.Variables, var_data: list[_t.Array]
+) -> list[dict[str, float]]:
     """
     function which creates the list of dictionaries in the format needed to compute
     sympy functions.
@@ -314,8 +332,8 @@ class __compute_sympy:
     Sub-Class for multiprocessing computation
     """
 
-    def __init__(self, func):
+    def __init__(self, func: _t.AnaliticalFunc):
         self.f = func
 
-    def compute(self, vals):
+    def compute(self, vals: dict[str, float]) -> float:
         return float(_sp.N(self.f.subs(vals)))

@@ -18,7 +18,7 @@ _mcluster = _os.path.join(_MCSC, "mcluster")
 _mcluster_sse = _os.path.join(_MCSC, "mcluster_sse")
 
 
-def mcluster_run(SSE: bool = False, **arguments):
+def mcluster_run(SSE: bool = False, **arguments: dict[str, int|float]) -> _QTable:
     """
     Run mcluster with the specified arguments.
 
@@ -118,7 +118,7 @@ def mcluster_run(SSE: bool = False, **arguments):
         return _QTable.read(data_path, format="ascii")
 
 
-def _manage_output_files():
+def _manage_output_files() -> str:
     """
     Move the output files to a new folder with a timestamp as the name.
     """
@@ -136,7 +136,7 @@ def _manage_output_files():
     return data_path
 
 
-def docs(detailed: bool = False):
+def docs(detailed: bool = False) -> str:
     """
     Print the documentation for the mcluster code.
     """

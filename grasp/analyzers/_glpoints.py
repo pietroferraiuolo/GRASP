@@ -1,10 +1,11 @@
 """
-Author(s) :
-    - Pietro Ferraiuolo : written in 2024
+Author(s)
+---------
+- Pietro Ferraiuolo : written in 2024
 
 Copyright : Pietro Ferraiuolo (pietro.ferraiuolo@inaf.it)
-
 """
+
 # =============================================================================
 # Gauss-Legendre 20-points
 # =============================================================================

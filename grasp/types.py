@@ -10,6 +10,7 @@ from typing import (
 from numpy.typing import ArrayLike
 from pandas import DataFrame
 from astropy.table import Table, QTable
+import sympy as _sp
 
 if TYPE_CHECKING:
     from grasp._utility.sample import Sample
@@ -58,3 +59,13 @@ Array: TypeAlias = Union[
     list[complex],
     list[int,float,complex]
 ]
+
+AnaliticalFunc : TypeAlias = Union[
+    _sp.Basic,
+    _sp.Add,
+    _sp.Mul,
+    _sp.Pow,
+    _sp.Function,
+    _sp.Equality
+]
+Variables: TypeAlias = Union[_sp.Symbol,_sp.NumberSymbol]
