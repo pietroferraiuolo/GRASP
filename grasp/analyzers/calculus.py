@@ -20,7 +20,7 @@ from grasp import types as _t
 
 
 def compute_numerical_function(
-    func: _t.AnaliticalFunc, variables: _t.Variables, var_data: list[_t.Array]
+    func: _t.AnalyticalFunc, variables: _t.Variables, var_data: list[_t.Array]
 ) -> _t.Array:
     """
 
@@ -67,7 +67,7 @@ def compute_numerical_function(
 
 
 def compute_error(
-    err_func: _t.AnaliticalFunc,
+    err_func: _t.AnalyticalFunc,
     variables: _t.Variables,
     var_data: list[_t.Array],
     var_errors: list[_t.Array],
@@ -104,7 +104,7 @@ def compute_error(
 
 
 def error_propagation(
-    func: _t.AnaliticalFunc, variables: _t.Variables, correlation: bool = False
+    func: _t.AnalyticalFunc, variables: _t.Variables, correlation: bool = False
 ) -> dict[str, _t.Union[_t.AnalyticalFunc, _t.Variables]]:
     """
     Computes the imput function's error with the standard error propagation
@@ -239,7 +239,7 @@ def gaus_legendre_integrator(
 
 
 def _multicore_computation(
-    n_cores: int, func: _t.AnaliticalFunc, val_dicts: list[dict[str, float]]
+    n_cores: int, func: _t.AnalyticalFunc, val_dicts: list[dict[str, float]]
 ) -> _t.Array:
     """
     Computation of the input function using multicore parallelization
@@ -266,7 +266,7 @@ def _multicore_computation(
 
 
 def _lambdified_computation(
-    func: _t.AnaliticalFunc, variables: _t.Variables, var_data: list[_t.Array]
+    func: _t.AnalyticalFunc, variables: _t.Variables, var_data: list[_t.Array]
 ) -> _t.Array:
     """
     Compute the input function compiling the sympy expression using numpy, for
@@ -332,7 +332,7 @@ class __compute_sympy:
     Sub-Class for multiprocessing computation
     """
 
-    def __init__(self, func: _t.AnaliticalFunc):
+    def __init__(self, func: _t.AnalyticalFunc):
         self.f = func
 
     def compute(self, vals: dict[str, float]) -> float:

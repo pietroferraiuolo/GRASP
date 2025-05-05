@@ -60,7 +60,7 @@ Array: TypeAlias = Union[
     list[int,float,complex]
 ]
 
-AnaliticalFunc : TypeAlias = Union[
+AnalyticalFunc : TypeAlias = Union[
     _sp.Basic,
     _sp.Add,
     _sp.Mul,
