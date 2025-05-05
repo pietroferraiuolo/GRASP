@@ -135,35 +135,35 @@ def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | li
 
         >>> tn = '20160516_114916'
         >>> get_file_list(tn=tn) # if only that [gc_name] folder has that tn folder
-        ['.../G-GCAS/grasp/data/query/[gc_name]/[tn]/query_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/spatial_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/velocity_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/query_info.ini',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/dynamical_data.txt']
+        ['.../GRASP/grasp/data/query/[gc_name]/[tn]/query_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/spatial_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/velocity_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/query_info.ini',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/dynamical_data.txt']
 
     Let's suppose we want only the list of 'xxx_data.txt' files:
 
         >>> get_file_list(tn=tn, key='_data')
-        ['.../G-GCAS/grasp/data/query/[gc_name]/[tn]/query_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/spatial_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/velocity_data.txt',
-         '.../G-GCAS/grasp/data/query/[gc_name]/[tn]/dynamical_data.txt']
+        ['.../GRASP/grasp/data/query/[gc_name]/[tn]/query_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/spatial_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/velocity_data.txt',
+         '.../GRASP/grasp/data/query/[gc_name]/[tn]/dynamical_data.txt']
 
     This function can be used to retrieve a list of folders too. Say we want to
     know which cluster has king-model data available:
 
-        >>> foldpath = '.../G-GCAS/grasp/data/models/'
+        >>> foldpath = '.../GRASP/grasp/data/models/'
         >>> fold_list = get_file_list(fold=foldpath)
         >>> fold_list
-        ['.../G-GCAS/grasp/data/models/NGC104',
-         '.../G-GCAS/grasp/data/models/NGC4372',
-         '.../G-GCAS/grasp/data/models/NGC6121']
+        ['.../GRASP/grasp/data/models/NGC104',
+         '.../GRASP/grasp/data/models/NGC4372',
+         '.../GRASP/grasp/data/models/NGC6121']
 
     These are the folders of the clusters which have king-model data available. indeed,
     if we check:
 
         >>> get_file_list(fold=fold_list[0])
-        ['.../G-GCAS/grasp/data/models/NGC104/SM_king.txt']
+        ['.../GRASP/grasp/data/models/NGC104/SM_king.txt']
     """
     if tn is None and fold is not None:
         fl = sorted([_os.path.join(fold, file) for file in _os.listdir(fold)])

@@ -279,7 +279,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius : float
             Radius, in degrees, of the scan circle.
         gc : grasp.cluster.Cluster or str
-            String name or Cluster object, created with the G-GCAS module, of a globular cluster.
+            String name or Cluster object, created with the GRASP module, of a globular cluster.
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
@@ -363,7 +363,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius : float
             Radius, in degrees, of the scan circle.
         gc : grasp.cluster.Cluster or str
-            String name or Cluster object created with the G-GCAS module of a globular cluster.
+            String name or Cluster object created with the GRASP module of a globular cluster.
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
@@ -418,7 +418,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius : float
             Radius, in degrees, of the scan circle.
         gc : grasp.cluster.Cluster or str
-            String name or Cluster object created with the G-GCAS module of a globular cluster.
+            String name or Cluster object created with the GRASP module of a globular cluster.
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments
@@ -473,7 +473,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius : float
             Radius, in degrees, of the scan circle.
         gc : grasp.cluster.Cluster or str
-            String name or Cluster object created with the G-GCAS module of a globular cluster.
+            String name or Cluster object created with the GRASP module of a globular cluster.
         save : bool, optional
             Whether to save the obtained data with its information or not.
         **kwargs : additional optional arguments

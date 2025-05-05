@@ -1,8 +1,8 @@
 """
 Created on May 2024
-    -Author: Pietro Ferraiuolo
+-Author: Pietro Ferraiuolo
 
-Information about the current version of the g-gcas package.
+Information about the current version of the grasp package.
 """
 __title__ = 'grasp'
 __long_title__ = 'GRASP : Globular clusteR Astrometry and Photometry Software'

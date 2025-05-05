@@ -6,7 +6,7 @@ Author(s)
 Description
 -----------
 This module contains R libraries implementation checks
-for the G-GCAS package.
+for the GRASP package.
 """
 from typing import Union
 from logging import ERROR
