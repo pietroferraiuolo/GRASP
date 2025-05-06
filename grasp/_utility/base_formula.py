@@ -61,13 +61,13 @@ class BaseFormula(ABC):
     def computed_values(self) -> _ArrayLike:
         """Return the values"""
         return "Not computed" if self._values is None else self._values
-    values = computed_values
+    values: _ArrayLike = computed_values
 
     @property
     def computed_errors(self) -> _ArrayLike:
         """Return the errors"""
         return "Not computed" if self._errors is None else self._errors
-    errors = computed_errors
+    errors: _ArrayLike = computed_errors
 
     @property
     def error_formula(self) -> _sb:

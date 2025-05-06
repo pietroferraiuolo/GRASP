@@ -39,7 +39,7 @@ def XD_estimator(
     data: _T.Array,
     errors: _T.Array,
     correlations: _T.Optional[dict[tuple[int, int], _T.Array]] = None,
-    *xdargs: tuple[str, ...],
+    **xdargs: tuple[str, ...],
 ):
     """
     Extreme Deconvolution Estimation function.
@@ -70,12 +70,12 @@ def XD_estimator(
         The XDGMM fitted model.
     """
     x_data = _data_format_check(data)  # (n_samples, n_features)
-    errors = _data_format_check(errors)  # (n_samples, n_features, n_features)
+    errors = _data_format_check(errors)  # (n_samples, n_features)
     if correlations is not None:
         covariance_matrix = _construct_covariance_matrices(errors, correlations)
     else:
-        covariance_matrix = _np.array([_np.diag(e**2) for e in errors])
-    model = XDGMM(random_state=_seed(), *xdargs)
+        covariance_matrix = _np.array([_np.diag(e**2) for e in errors]) # (n_samples, n_features, n_features)
+    model = XDGMM(random_state=_seed(), **xdargs)
     model.fit(x_data, covariance_matrix)
     return model
 
@@ -270,15 +270,15 @@ def fit_distribution(
     else:
         reg_func = _genv["regression"]
         if isinstance(bins, str) and bins == "knuth":
-            print("knuth?")
+            # print("knuth?") # DEBUG
             from astropy.stats import knuth_bin_width
             _,bins = knuth_bin_width(data, return_bins=True)
             bins = _np2r.numpy2rpy(bins)
         elif isinstance(bins, int):
-            print("int?")
+            # print("int?") # DEBUG
             bins = _ro.IntVector([bins])
         elif isinstance(bins, (list,_np.ndarray)):
-            print("array?")
+            # print("array?") # DEBUG
             bins = _np2r.numpy2rpy(bins)
         r_data = _np2r.numpy2rpy(data)
         regression_model = reg_func(r_data, method=method, bins=bins, verb=verbose)

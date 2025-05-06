@@ -145,20 +145,20 @@ class Formulary:
             else self.formulas[name]
         )
         variables = self._get_ordered_variables(formula)
-        if not all(v.name in data.keys() for v in variables):
+        if not all([v.name in data.keys() for v in variables]):
             raise ValueError("Missing data for some variables in the formula.")
         if errors is not None:
-            if not all(v.name in errors.keys() for v in variables):
+            if not all([('epsilon_'+v.name) in errors.keys() for v in variables]):
                 raise ValueError(
                     "Missing errors for some variables in the formula."
                 )
             if corrs is not None:
-                if not all(
+                if not all([
                         f"{v1.name}_{v2.name}" in corrs.keys()
                         for v1 in variables
                         for v2 in variables
                         if v1 != v2
-                ):
+                ]):
                     raise ValueError(
                         "Missing correlations for some variables in the formula."
                     )
@@ -168,7 +168,11 @@ class Formulary:
         corr_list = list(corrs.values()) if corrs is not None else None
         result = formula.compute(data_list, err_list, corr_list)
         if asarray:
-            result = result.computed_values
+            if errors is not None:
+                import numpy
+                result = numpy.array([result.values.tolist(), result.errors.tolist()])
+            else:
+                result = result.computed_values
         return result
 
     def var_order(self, name: str):

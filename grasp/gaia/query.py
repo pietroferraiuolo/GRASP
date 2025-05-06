@@ -194,13 +194,21 @@ class GaiaQuery:
         self._table = gaia_table
         self._path = _BDP
         self._fold = None
-        self._queryInfo: dict[str,dict[ str,_gt.Any|_u.Quantity|float|str]] = {}
         self._baseQ = """SELECT {data}
 FROM {table}
 WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRCLE('ICRS',{circle}))=1
     {cond}"""
         self.last_result = None
         self.last_query = None
+        self._queryInfo: dict[str,dict[str,_gt.Any|_u.Quantity|float|str]] = {
+            "Scan Info": {
+                "RA": "None",
+                "DEC": "None",
+                "Scan Radius": "None",
+                "Data Acquired": "None",
+                "Conditions Applied": "None",
+            }
+        }
         print(f"Initialized with Gaia table: '{gaia_table}'")
 
     def __repr__(self):
@@ -255,10 +263,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         job = _Gaia.launch_job_async(adql_cmd)
         result = job.get_results()
         name = "UntrackedData"
-        self._queryInfo = {
-            "Scan Info": {"Command": adql_cmd},
-            "Flag": {"Query": "'true free'"},
-        }
+        self._queryInfo["Scan Info"]["Command"] = adql_cmd
         if save:
             self._saveQuery(result, name)
         return result
@@ -321,8 +326,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
         self._queryInfo = {
-            "Scan Info": {"RA": ra, "DEC": dec, "Scan Radius": radius},
-            "Flag": {"Query": "free"},
+            "Scan Info": {"RA": ra, "DEC": dec, "Scan Radius": radius}
         }
         dat = get_kwargs(("data", "dat", "params", "parameters"), "source_id", kwargs)
         self._queryInfo["Scan Info"]["Data Acquired"], _ = self._formatCheck(
@@ -394,7 +398,6 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
               pmra, pmra_error, pmdec, pmdec_error"
         astro_sample = self.free_gc_query(radius, gc, save, data=astrometry, **kwargs)
         self._queryInfo["Scan Info"]["Data Acquired"] = astrometry
-        self._queryInfo["Flag"]["Query"] = "astrometry"
         return astro_sample
 
     def get_photometry(
@@ -450,7 +453,6 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
               phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
         phot_sample = self.free_gc_query(radius, gc, save, data=photometry, **kwargs)
         self._queryInfo["Scan Info"]["Data Acquired"] = photometry
-        self._queryInfo["Flag"]["Query"] = "photometry"
         return phot_sample
 
     def get_rv(
@@ -512,7 +514,6 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             radius, gc, save, data=rv, conditions=conditions, **kwargs
         )
         self._queryInfo["Scan Info"]["Data Acquired"] = rv
-        self._queryInfo["Flag"]["Query"] = "radial velocity"
         return rv_sample
 
 
@@ -627,25 +628,26 @@ Loading it..."""
             The dictionary with the header added.
 
         """
+        sinfo = self._queryInfo["Scan Info"]
         header = {
             "OBJECT": (
                 name.upper() if not name.upper() == "UNTRACKEDDATA" else "UNDEF",
                 "object name",
             ),
             "RA": (
-                self._queryInfo["Scan Info"]["RA"].value,
+                sinfo["RA"].value if isinstance(sinfo["RA"],_u.Quantity) else sinfo["RA"],
                 "right ascension of scan centre [deg]",
             ),
             "DEC": (
-                self._queryInfo["Scan Info"]["DEC"].value,
+                sinfo["DEC"].value  if isinstance(sinfo["DEC"],_u.Quantity) else sinfo['DEC'],
                 "declination of scan centre [deg]",
             ),
             "RADIUS": (
-                self._queryInfo["Scan Info"]["Scan Radius"],
+                sinfo["Scan Radius"],
                 "radius of scan circle [deg]",
             ),
             "CONDS": (
-                not self._queryInfo["Scan Info"]["Conditions Applied"] == "None",
+                not sinfo["Conditions Applied"] == "None",
                 "conditions applied to the query",
             ),
         }
