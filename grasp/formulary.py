@@ -14,6 +14,7 @@ from grasp.core.folder_paths import (
     SYS_DATA_FOLDER as _sdf,
     FORMULARY_BASE_FILE as _fbf,
 )
+from grasp import types as _gt
 
 _str2py = str.maketrans(
     {
@@ -111,9 +112,9 @@ class Formulary:
     def compute(
         self,
         name: str,
-        data: dict,
-        errors: dict = None,
-        corrs: dict = None,
+        data: dict[str,_gt.ArrayLike],
+        errors: dict[str,_gt.ArrayLike] = None,
+        corrs: dict[str,_gt.ArrayLike] = None,
         asarray: bool = False,
     ):
         """
@@ -153,15 +154,25 @@ class Formulary:
                     "Missing errors for some variables in the formula."
                 )
             if corrs is not None:
-                if not all([
-                        f"{v1.name}_{v2.name}" in corrs.keys()
-                        for v1 in variables
-                        for v2 in variables
-                        if v1 != v2
-                ]):
-                    raise ValueError(
-                        "Missing correlations for some variables in the formula."
-                    )
+                var_names = [v.name for v in variables]
+                checked_pairs = set()
+                for i, v1 in enumerate(var_names):
+                    for v2 in var_names[i+1:]:
+                        key1 = f"rho_{v1}_{v2}"
+                        key2 = f"rho_{v2}_{v1}"
+                        if key1 not in corrs and key2 not in corrs:
+                            raise ValueError(
+                                f"Missing correlation for variables: {v1}, {v2} in the formula."
+                            )
+                # if not all([
+                #         f"rho_{v1.name}_{v2.name}" in corrs.keys()
+                #         for v1 in variables
+                #         for v2 in variables
+                #         if v1 != v2
+                # ]):
+                #     raise ValueError(
+                #         "Missing correlations for some variables in the formula."
+                #     )
         formula = _FormulaWrapper(name.translate(_py2str).capitalize(), formula, variables)
         data_list = list(data.values())
         err_list = list(errors.values()) if errors is not None else None

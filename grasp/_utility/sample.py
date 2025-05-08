@@ -21,9 +21,9 @@ easily.
 
 import pandas as _pd
 from astropy import units as _u
-from typing import List as _List
 from grasp._utility.cluster import Cluster as _Cluster
 from astropy.table import QTable as _QTable, Table as _Table
+from grasp import types as _gt
 
 
 class Sample:
@@ -42,14 +42,14 @@ class Sample:
         Globular cluster object used for the query.
     """
 
-    def __init__(self, sample: _pd.DataFrame | _QTable | _Table, gc: _Cluster | str = None):
+    def __init__(self, sample: _gt.AstroTable, gc: _gt.Optional[_gt.GcInstance] = None):
         """The constructor"""
         self.qinfo = None
         self._sample = (
             _QTable.from_pandas(sample) if isinstance(sample, _pd.DataFrame) else sample
         )
         self._table = None
-        self.__check_simulation()
+        self.is_simulation = self.__check_simulation()
         self._bckupSample = self._sample.copy()
         if isinstance(gc, _Cluster):
             self.gc = gc
@@ -63,6 +63,7 @@ class Sample:
                 self.gc = _Cluster(gc)
         else:
             self.gc = None
+        self._merge_info: _pd.DataFrame = None
 
     def __str__(self):
         """The string representation"""
@@ -79,35 +80,42 @@ class Sample:
         """The length of the sample"""
         return len(self._sample["SOURCE_ID"])
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str):
         """The item getter"""
         return self._sample[key]
 
     def __getattr__(self, attr: str):
         """The attribute getter"""
         try:
-            if attr in self._sample.colnames:
+            if attr in self.__colnames__():
                 return self._sample[attr]
             else:
-                raise AttributeError(f"'Sample' object has no attribute '{attr}'")
-        except AttributeError:
-            getattr(self._sample, attr)
+                getattr(self._sample, attr)
+        except Exception as e:
+            raise(e)
 
-    def __setitem__(self, key: str, value):
+    def __setitem__(self, key: str, value: _gt.Any):
         """The item setter"""
         self._sample[key] = value
 
-    def __contains__(self, item):
+    def __contains__(self, item: str):
         """The item checker"""
-        return item in self._sample.colnames
+        return item in self.__colnames__()
 
     def __iter__(self):
         """The iterator"""
-        return iter(self._sample.colnames)
+        return iter(self.__colnames__())
 
     def __reversed__(self):
         """The reversed iterator"""
-        return reversed(self._sample.colnames)
+        return reversed(self.__colnames__())
+    
+    def __colnames__(self):
+        """The column names"""
+        if isinstance(self._sample, _pd.DataFrame):
+            return self._sample.columns.values
+        elif isinstance(self._sample, (_Table,_QTable)):
+            return self._sample.colnames
 
     @property
     def sample(self):
@@ -147,7 +155,7 @@ class Sample:
         return self._sample.to_pandas().describe()
 
 
-    def join(self, other, inplace: bool = False):
+    def join(self, other: "Sample", keep: str = 'both', inplace: bool = False) -> _gt.TabularData:
         """
         Joins the sample data with another sample data.
 
@@ -155,6 +163,8 @@ class Sample:
         ----------
         other : grasp.Sample
             The other sample data to join with.
+        keep : str
+            The type of join to perform. Can be 'left_only', 'right_only', or 'both'.
         inplace : bool
             If True, the operation is done in place, otherwise a new object is returned.
 
@@ -166,6 +176,10 @@ class Sample:
         sample = self._sample.to_pandas()
         other_sample = other.to_pandas()
         merged = sample.merge(other_sample, how="outer", indicator=True)
+        if keep not in ['both', 'left_only', 'right_only']:
+            raise ValueError("Invalid value for 'keep'. Must be 'both', 'left_only', or 'right_only'.")
+        if keep != 'both':
+            merged = merged[merged["_merge"] == keep]
         merged_qtable = _QTable.from_pandas(merged)
         if inplace:
             self._sample = merged_qtable
@@ -179,7 +193,7 @@ class Sample:
             return new_sample
 
 
-    def to_pandas(self, overwrite: bool = False, *args, **kwargs):
+    def to_pandas(self, overwrite: bool = False, *args: tuple[str,_gt.Any], **kwargs: dict[str,_gt.Any]) -> _gt.TabularData:
         """
         Converts the sample (`astropy.QTable` as default) to a pandas DataFrame.
 
@@ -198,15 +212,18 @@ class Sample:
         if isinstance(self._sample, (_QTable, _Table)):
             pandas_df = self._sample.to_pandas(*args, **kwargs)
             if overwrite:
-                self._table = self._sample
+                self._table = self._sample.copy()
                 self._sample = pandas_df
-                return self._sample.head(5)
+                print(self._sample.__repr__)
+                return self
             return pandas_df
         else:
-            pass
+            raise TypeError(
+                f"Expected an astropy.Table or QTable, but got {type(self._sample)}"
+            )
 
 
-    def to_table(self, *args):
+    def to_table(self, *args: tuple[str,_gt.Any]) -> _gt.TabularData:
         """
         Converts back the sample from a pandas.DataFrame into an astropy Table.
 
@@ -220,21 +237,16 @@ class Sample:
         table : astropy.Table
             The table containing the sample data.
         """
-        if not isinstance(self._sample, (_QTable, _Table)):
-            if self._table is not None:
-                if self._table.columns == self._sample.columns:
-                    self._sample = self._table
-                else:
-                    self._sample = _QTable.from_pandas(self._sample, *args)
-            else:
-                if isinstance(self._sample, _pd.DataFrame):
-                    self._sample = _QTable.from_pandas(self._sample, *args)
-            return self._sample
+        if isinstance(self._sample, _pd.DataFrame):
+            self._sample = _Table.from_pandas(self._sample, *args)
+            return self._sample.__repr__()
         else:
-            pass
+            raise TypeError(
+                f"Expected a pandas.DataFrame, but got {type(self._sample)}"
+            )
 
 
-    def to_numpy(self, columns: _List[str] = None):
+    def to_numpy(self, columns: list[str] = None):
         """
         Converts the sample data to a numpy array.
 
@@ -254,7 +266,7 @@ class Sample:
         self._sample = self._bckupSample.copy()
 
 
-    def update_gc_params(self, **kwargs):
+    def update_gc_params(self, **kwargs: dict[str,_gt.Any]) -> str:
         """
         Updates the parameters of the cluster object.
 
@@ -337,7 +349,7 @@ class Sample:
             return Sample(sample, self.gc)
 
 
-    def __check_simulation(self):
+    def __check_simulation(self) -> bool:
         """Check wether the data the sample has been instanced with is
         a simulation or real data"""
         sim_a = [
@@ -359,16 +371,16 @@ class Sample:
             self._sample["vy"] = self._sample["vy_[km/s]"] * _u.km / _u.s
             self._sample["vz"] = self._sample["vz_[km/s]"] * _u.km / _u.s
             self.drop_columns(sim_a)
-            self._is_simulation = True
+            is_simulation = True
         else:
-            self._is_simulation = False
-            return
+            is_simulation = False
+        return is_simulation
 
 
     def __get_repr(self) -> str:
         """Gets the str representation"""
         from tabulate import tabulate
-        if self._is_simulation:
+        if self.is_simulation:
             gctxt = f"""Simulated data sample"""
         elif self.gc.id == "UntrackedData":
             gctxt = f"""Gaia data retrieved at coordinates
@@ -378,7 +390,7 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
             gctxt = f"""Data sample for cluster {self.gc.id}
 """
         stxt = "\n" # "\nData Columns:\n"
-        names: list[str] = [name.lower() for name in self._sample.colnames]
+        names: list[str] = [name.lower() for name in self.__colnames__()]
         max_len: int = len(max(names, key=len))
         terminal_min_size: int = 80
         ncols: int

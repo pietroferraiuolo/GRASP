@@ -30,7 +30,7 @@ import matplotlib.pyplot as plt
 import os, shutil, pandas as pd, numpy as np
 from grasp.plots import label_font, title_font
 from astropy.units import Quantity as _Quantity
-from typing import Optional as _Optional, Union as _Union
+from typing import Optional as _Optional, Union as _Union, Any as _Any
 from grasp.core.folder_paths import (
     CLUSTER_DATA_FOLDER,
     CLUSTER_MODEL_FOLDER,
@@ -59,7 +59,7 @@ class Cluster:
     >>> ngc104 = Cluster('ngc104')
     """
 
-    def __init__(self, name: _Optional[str] = None, **params):
+    def __init__(self, name: _Optional[str] = None, **params: dict[str,_Any]):
         """The constructor"""
         if name == 'UntrackedData' or name is None:
             print("Not a Cluster: no model available")
@@ -92,13 +92,13 @@ class Cluster:
         """Representation"""
         return self.__get_repr()
     
-    def __setattr__(self, name, value):
+    def __setattr__(self, name: str, value: _Any):
         """
         Set the attribute value.
         """
         self.__dict__[name] = value
 
-    def show_model(self, **kwargs):
+    def show_model(self, **kwargs: dict[str,_Any]):
         """
         Function for plotting the loaded king model.
 
@@ -207,9 +207,9 @@ class Cluster:
     def __get_repr(self):
         """repr creation"""
         if self.id == "UntrackedData":
-            text = "<grasp._cluster.Cluster object>"
+            text = "<grasp._utility.cluster.Cluster object>"
         else:
-            text = f"<grasp._cluster.Cluster object: {self.id}>"
+            text = f"<grasp._utility.cluster.Cluster object: {self.id}>"
         return text
 
     def __get_str(self):
