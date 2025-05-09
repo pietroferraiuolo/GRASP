@@ -96,7 +96,10 @@ class SampleQTable(_QTable):
 
     def join(self, other: "SampleQTable", keep: str = 'both', inplace: bool = False) -> "SampleQTable":
         sample = self.to_pandas()
-        other_sample = other.to_pandas()
+        if not isinstance(other, _pd.DataFrame):
+            other_sample = other.to_pandas()
+        else:
+            other_sample = other
         merged = sample.merge(other_sample, how="outer", indicator=True)
         if keep not in ['both', 'left_only', 'right_only']:
             raise ValueError("Invalid value for 'keep'. Must be 'both', 'left_only', or 'right_only'.")

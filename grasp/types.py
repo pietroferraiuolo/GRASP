@@ -5,10 +5,11 @@ from typing import (
     Union,
     Any,
     Optional,
+    Protocol,
     TypeAlias
 )
 from numpy.typing import ArrayLike
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from astropy.table import Table, QTable
 import sympy as _sp
 
@@ -39,6 +40,21 @@ GcInstance: TypeAlias = Union[
     str,
     "Cluster",
 ]
+
+
+class _SampleProtocol(Protocol):
+    def __getitem__(self, key: str) -> Table.Columns | Table.Row | "Series"[Any]:
+        ...
+    def __getattr__(self, attr: str) -> (Any | Table.Columns | Table.Row | "Series"[Any] | "Sample"):
+        ...
+    @property
+    def sample(self) -> AstroTable:
+        ...
+    @property
+    def gc(self) -> Optional["Cluster"]:
+        ...
+    def join(self, other: "Sample", keep: str, inplace: bool) -> "Sample":
+        ...
 
 FittingFunc: TypeAlias = Union[str, Callable[..., float]]
 
