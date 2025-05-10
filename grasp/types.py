@@ -56,6 +56,13 @@ class _SampleProtocol(Protocol):
     def join(self, other: "Sample", keep: str, inplace: bool) -> "Sample":
         ...
 
+class _RegressionProtocol(Protocol):
+    @property
+    def model(self) -> dict[str, Any]: ...
+    @property
+    def coeffs(self) -> ArrayLike: ...
+    
+
 FittingFunc: TypeAlias = Union[str, Callable[..., float]]
 
 RegressionModels: TypeAlias = Union[
