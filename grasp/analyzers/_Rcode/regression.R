@@ -164,3 +164,8 @@ linear_regression <- function(data, verb = FALSE) {
          kind = "linear")
   )
 }
+
+regression_predict <- function(model, fit_data) {
+  predictions <- predict(model, newdata = fit_data)
+  return( predictions )
+}
