@@ -18,7 +18,7 @@ import os as _os
 import datetime as _dt
 from typing import Any as _Any, Optional as _opt
 from grasp.core import folder_paths as _fn
-from astropy.table import Table as _Table
+from astropy.table import QTable as _QTable
 
 datapath = _fn.BASE_DATA_PATH
 querypath = _fn.QUERY_DATA_FOLDER
@@ -31,7 +31,7 @@ def load_data(
     file_format: str = ".fits",
     name: _opt[str] = None,
     as_sample: bool = True,
-) -> _Table | _Any:
+) -> _QTable | _Any:
     """
     Loads the data from a file as an Astropy quantity table.
 
@@ -55,7 +55,7 @@ def load_data(
 
     Returns
     -------
-    data : astropy.table.Table or grasp.Sample
+    data : astropy.table.QTable or grasp.Sample
         The loaded data from the file. If `as_sample` is True, the data is returned
         as a Sample object; otherwise, it is returned as a QTable.
 
@@ -83,7 +83,7 @@ def load_data(
         file = _os.path.join(file_path, file_name)
     else:
         file = name
-    data = _Table.read(file, format=data_format)
+    data = _QTable.read(file, format=data_format)
     if as_sample:
         from grasp._utility.sample import Sample
         if file_format=='.fits' and "OBJECT" in data.meta.keys():

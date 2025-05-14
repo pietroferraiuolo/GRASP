@@ -1,21 +1,22 @@
 """
-::module..grasp._utility.sample_qtable
+::module..grasp._utility.sample
 
-sample_qtable.py
-================
+sample.py
+=========
 
-Subclass of astropy QTable with custom Sample features.
 
 Author(s):
 ----------
-- Pietro Ferraiuolo : Written in 2024 (adapted from Sample)
+- Pietro Ferraiuolo : Written in 2024
 
 Description:
 ------------
-This module provides a subclass of QTable for handling the query result sample.
-It unifies the Cluster object and the sample data obtained, in order to have a
+This module provides a class for handling the query result sample. The class
+unifies the Cluster object and the sample data obtained, in order to have a
 compact object which has everything and from which quantities can be computed
-easily, while behaving as a QTable.
+easily.
+
+
 """
 
 import pandas as _pd
@@ -24,80 +25,108 @@ from grasp._utility.cluster import Cluster as _Cluster
 from astropy.table import QTable as _QTable, Table as _Table
 from grasp import types as _gt
 
-class Sample(_QTable):
-    """
-    Subclass of QTable for handling the query result sample.
-    Unifies the Cluster object and the sample data obtained.
-    """
-    def __init__(self, data: _gt.AstroTable = None, gc: _gt.Optional[_gt.GcInstance] = None, **kwargs: dict[str,_gt.Any]):
-        """
-        Class for handling the query result sample.
 
-        It is an object with unifies the Cluster object and the sample data obtained,
-        in order to have a compact object which has everythin and from which quantities
-        can be computed easily.
+class Sample:
+    """
+    Class for handling the query result sample.
 
-        Parameters
-        ----------
-        sample : astropy.Table, pandas.DataFrame, dict
-            Table containing the retrieved sample's data.
-        gc : grasp.cluster.Cluster, optional
-            Globular cluster object used for the query.
-        """
-        # Accepts data as QTable, Table, DataFrame, or dict
-        if isinstance(data, _pd.DataFrame):
-            super().__init__(_QTable.from_pandas(data), **kwargs)
-        else:
-            super().__init__(data, **kwargs)
+    It is an object with unifies the Cluster object and the sample data obtained,
+    in order to have a compact object which has everythin and from which quantities
+    can be computed easily.
+
+    Parameters
+    ----------
+    sample : astropy.table.Table
+        Table containing the retrieved sample's data.
+    gc : grasp.cluster.Cluster, optional
+        Globular cluster object used for the query.
+    """
+
+    def __init__(self, sample: _gt.AstroTable, gc: _gt.Optional[_gt.GcInstance] = None):
+        """The constructor"""
         self.qinfo = None
+        self._sample = (
+            _QTable.from_pandas(sample) if isinstance(sample, _pd.DataFrame) else sample
+        )
+        self._table = None
         self.is_simulation = self.__check_simulation()
-        if isinstance(gc, str):
+        self._bckupSample = self._sample.copy()
+        if isinstance(gc, _Cluster):
+            self.gc = gc
+        elif isinstance(gc, str):
             if gc == 'UNTRACKEDDATA' or gc == 'UntrackedData':
                 from astropy.units import deg
                 self.gc = _Cluster('UntrackedData')
-                self.gc.ra = self['ra'].mean()*deg
-                self.gc.dec = self['dec'].mean()*deg
+                self.gc.ra = self._sample['ra'].mean()*deg
+                self.gc.dec = self._sample['dec'].mean()*deg
             else:
                 self.gc = _Cluster(gc)
         else:
-            self.gc = gc
+            self.gc = None
         self._merge_info: _pd.DataFrame = None
 
     def __str__(self):
         """The string representation"""
-        if self.is_simulation:
-            return f"Simulated data sample" + "\n" + super().__str__()
+        if self._is_simulation:
+            return f"Simulated data sample"+ "\n" + self._sample.__str__()
         else:
-            return str(self.gc) + "\n" + super().__str__()
+            return self.gc.__str__() + "\n" + self._sample.__str__()
 
     def __repr__(self):
         """The representation"""
         return self.__get_repr()
 
+    def __len__(self):
+        """The length of the sample"""
+        return len(self._sample["SOURCE_ID"])
+
+    def __getitem__(self, key: str):
+        """The item getter"""
+        return self._sample[key]
+
     def __getattr__(self, attr: str):
         """The attribute getter"""
-        # Allow attribute access to columns
-        if attr in self.colnames:
-            return self[attr]
-        return super().__getattribute__(attr)
+        try:
+            if attr in self.__colnames__():
+                return self._sample[attr]
+            else:
+                getattr(self._sample, attr)
+        except Exception as e:
+            raise(e)
+
+    def __setitem__(self, key: str, value: _gt.Any):
+        """The item setter"""
+        self._sample[key] = value
 
     def __contains__(self, item: str):
         """The item checker"""
-        return item in self.colnames
+        return item in self.__colnames__()
 
     def __iter__(self):
         """The iterator"""
-        return iter(self.colnames)
+        return iter(self.__colnames__())
 
     def __reversed__(self):
         """The reversed iterator"""
-        return reversed(self.colnames)
+        return reversed(self.__colnames__())
+    
+    def __colnames__(self):
+        """The column names"""
+        if isinstance(self._sample, _pd.DataFrame):
+            return self._sample.columns.values
+        elif isinstance(self._sample, (_Table,_QTable)):
+            return self._sample.colnames
 
     @property
     def sample(self):
         """Returns the sample data"""
-        return self
-
+        return self._sample
+    
+    @property
+    def meta(self):
+        """Returns the metadata of the sample"""
+        return self._sample.meta
+    metadata = meta
 
     def drop_columns(self, columns: list[str]):
         """
@@ -108,21 +137,25 @@ class Sample(_QTable):
         columns : list
             List of column names to drop.
         """
-        self.remove_columns(columns)
+        self._sample.remove_columns(columns)
+
 
     def info(self, *args):
         """Returns the info of the sample"""
-        return super().info(*args)
+        return self._sample.info(*args)
+    
 
     def head(self, n: int = 5):
         """Returns the first n rows of the sample"""
-        return self.to_pandas().head(n)
+        return self._sample.to_pandas().head(n)
+    
 
     def describe(self):
         """Returns the description of the sample"""
-        return self.to_pandas().describe()
+        return self._sample.to_pandas().describe()
 
-    def join(self, other: "Sample", keep: str = 'both', inplace: bool = False) -> "Sample":
+
+    def join(self, other: "Sample", keep: str = 'both', inplace: bool = False) -> _gt.TabularData:
         """
         Joins the sample data with another sample data.
 
@@ -140,11 +173,8 @@ class Sample(_QTable):
         sample : grasp.Sample
             The sample object containing the joined data.
         """
-        sample = self.to_pandas()
-        if not isinstance(other, _pd.DataFrame):
-            other_sample = other.to_pandas()
-        else:
-            other_sample = other
+        sample = self._sample.to_pandas()
+        other_sample = other.to_pandas()
         merged = sample.merge(other_sample, how="outer", indicator=True)
         if keep not in ['both', 'left_only', 'right_only']:
             raise ValueError("Invalid value for 'keep'. Must be 'both', 'left_only', or 'right_only'.")
@@ -152,20 +182,18 @@ class Sample(_QTable):
             merged = merged[merged["_merge"] == keep]
         merged_qtable = _QTable.from_pandas(merged)
         if inplace:
-            for col in list(self.colnames):
-                self.remove_column(col)
-            for col in merged_qtable.colnames:
-                self[col] = merged_qtable[col]
+            self._sample = merged_qtable
             self._merge_info = merged[["SOURCE_ID", "_merge"]]
             self.drop_columns(["_merge"])
-            return self
+            return merged_qtable
         else:
             new_sample = Sample(merged_qtable, self.gc)
             new_sample._merge_info = merged[["SOURCE_ID", "_merge"]]
             new_sample.drop_columns(["_merge"])
             return new_sample
 
-    def to_pandas(self, *args, **kwargs) -> _gt.TabularData:
+
+    def to_pandas(self, overwrite: bool = False, *args: tuple[str,_gt.Any], **kwargs: dict[str,_gt.Any]) -> _gt.TabularData:
         """
         Converts the sample (`astropy.QTable` as default) to a pandas DataFrame.
 
@@ -181,7 +209,42 @@ class Sample(_QTable):
         df : pandas.DataFrame
             The DataFrame containing the sample data.
         """
-        return super().to_pandas(*args, **kwargs)
+        if isinstance(self._sample, (_QTable, _Table)):
+            pandas_df = self._sample.to_pandas(*args, **kwargs)
+            if overwrite:
+                self._table = self._sample.copy()
+                self._sample = pandas_df
+                print(self._sample.__repr__)
+                return self
+            return pandas_df
+        else:
+            raise TypeError(
+                f"Expected an astropy.Table or QTable, but got {type(self._sample)}"
+            )
+
+
+    def to_table(self, *args: tuple[str,_gt.Any]) -> _gt.TabularData:
+        """
+        Converts back the sample from a pandas.DataFrame into an astropy Table.
+
+        Parameters
+        ----------
+        *args : tuple
+            Positional arguments to pass to the astropy.Table constructor.
+
+        Returns
+        -------
+        table : astropy.Table
+            The table containing the sample data.
+        """
+        if isinstance(self._sample, _pd.DataFrame):
+            self._sample = _Table.from_pandas(self._sample, *args)
+            return self._sample.__repr__()
+        else:
+            raise TypeError(
+                f"Expected a pandas.DataFrame, but got {type(self._sample)}"
+            )
+
 
     def to_numpy(self, columns: list[str] = None):
         """
@@ -193,14 +256,15 @@ class Sample(_QTable):
             The numpy array containing the sample data.
         """
         if columns is not None:
-            return self[columns].to_pandas().to_numpy()
+            return self._sample[columns].to_pandas().to_numpy()
         else:
-            return self.to_pandas().to_numpy()
+            return self._sample.to_pandas().to_numpy()
+
 
     def reset_sample(self):
         """Resets the sample to its original state"""
-        for col in self._bckupSample.colnames:
-            self[col] = self._bckupSample[col]
+        self._sample = self._bckupSample.copy()
+
 
     def update_gc_params(self, **kwargs: dict[str,_gt.Any]) -> str:
         """
@@ -211,7 +275,7 @@ class Sample(_QTable):
         **kwargs : dict
             The parameters to update.
         """
-        if self.is_simulation:
+        if self._is_simulation:
             return "This is a simulation data sample. No GC available."
         for key in kwargs:
             if hasattr(self.gc, key):
@@ -226,8 +290,8 @@ class Sample(_QTable):
                 raise AttributeError(
                     f"'Cluster' object has no attribute '{key}'\n{ptxt}"
                 )
-        return str(self.gc)
-
+        return self.gc.__str__()
+    
 
     def apply_conditions(self, conditions: str|list[str]|dict[str,str], inplace: bool = False):
         """
@@ -326,7 +390,7 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
             gctxt = f"""Data sample for cluster {self.gc.id}
 """
         stxt = "\n" # "\nData Columns:\n"
-        names: list[str] = [name.lower() for name in self.colnames]
+        names: list[str] = [name.lower() for name in self.__colnames__()]
         max_len: int = len(max(names, key=len))
         terminal_min_size: int = 80
         ncols: int
