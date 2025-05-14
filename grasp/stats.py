@@ -107,7 +107,7 @@ def gaussian_mixture_model(
 
     Returns
     -------
-    fitted_model : dict
+    fitted_model : grasp.GaussianMixtureModel
         The fitted gaussian mixture model and its parameters.
     """
     _checkRpackages("mclust")

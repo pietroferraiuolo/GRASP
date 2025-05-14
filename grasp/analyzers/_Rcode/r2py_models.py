@@ -34,6 +34,7 @@ class GaussianMixtureModel:
         self.model          = _listvector_to_dict(r_model)
         self.classification = _listvector_to_dict(predictions) if predictions is not None else None
         self._predicted     = False if predictions is None else True
+        self._manage_parameters()
 
     def __repr__(self):
         return "GaussianMixtureModel()"
@@ -65,7 +66,7 @@ Predicted : {self._predicted}
         """
         The data used to fit the model.
         """
-        return self.model["data"]
+        return _np.array(self.model["data"])
 
     @property
     def bic(self):
@@ -111,12 +112,6 @@ Predicted : {self._predicted}
         - covMats : the covariance matrices for each group of the model
         - sigmasq : the variance of the features of the model
         """
-        self.model["parameters"]["variance"]["covMats"] = _np.swapaxes(
-            self.model["parameters"]["variance"]["sigma"], 0, 2
-        )
-        keys_to_remove = ["modelName", "d", "G", "sigma", "scale"]
-        for key in keys_to_remove:
-            self.model["parameters"].pop(key, None)
         return self.model["parameters"]
 
     @property
@@ -190,6 +185,16 @@ Predicted : {self._predicted}
             filename += '.rds'
         rmodel = _ro.r('readRDS')(filename)
         return cls(r_model=rmodel)
+
+
+    def _manage_parameters(self):
+        sigma = self.model["parameters"]["variance"]["sigma"]
+        # Handle different shapes of sigma
+        self.model["parameters"]["variance"]["covMats"] = _np.reshape(sigma, (self.ndG[2], self.ndG[1], self.ndG[1]))
+        self.model["parameters"]["mean"] = _np.reshape(_np.array(self.model["parameters"]["mean"]), (self.ndG[2], self.ndG[1]))
+        keys_to_remove = ["modelName", "d", "G", "sigma", "scale", 'shape']
+        for key in keys_to_remove:
+            self.model["parameters"]['variance'].pop(key, None)
 
 
 class RegressionModel:
@@ -406,8 +411,8 @@ def _kde_labels(kind: str, coeffs):
         A, mu, sigma2 = coeffs
         label = f"""Gaussian
 $A$   = {_format_number(A)}
-$\mu$   = {_format_number(mu)}
-$\sigma^2$  = {_format_number(sigma2)}"""
+$\\mu$   = {_format_number(mu)}
+$\\sigma^2$  = {_format_number(sigma2)}"""
         
     elif kind == 'boltzmann':
         A1, A2, x0, dx = coeffs
@@ -421,33 +426,33 @@ $dx$   = {_format_number(dx)}"""
         A, lmbda = coeffs
         label = f"""Exponential
 $A$   = {_format_number(A)}
-$\lambda$ = {_format_number(lmbda)}"""
+$\\lambda$ = {_format_number(lmbda)}"""
         
     elif kind == 'king':
         A, ve, sigma = coeffs
         label = f"""King
 $A$   = {_format_number(A)}
 $v_e$   = {_format_number(ve)}
-$\sigma$  = {_format_number(sigma)}"""
+$\\sigma$  = {_format_number(sigma)}"""
         
     elif kind == 'maxwell':
         A, sigma = coeffs
         label = f"""Maxwell
 $A$   = {_format_number(A)}
-$\sigma$  = {_format_number(sigma)}"""
+$\\sigma$  = {_format_number(sigma)}"""
         
     elif kind == 'rayleigh':
         A, sigma = coeffs
         label = f"""Rayleigh
 $A$   = {_format_number(A)}
-$\sigma$  = {_format_number(sigma)}"""
+$\\sigma$  = {_format_number(sigma)}"""
         
     elif kind == 'lorentzian':
         A, x0, gamma = coeffs
         label = f"""Lorentzian
 $A$   = {_format_number(A)}
 $x_0$   = {_format_number(x0)}
-$\gamma$  = {_format_number(gamma)}"""
+$\\gamma$  = {_format_number(gamma)}"""
     
     elif kind == 'power':
         A, n = coeffs
@@ -460,13 +465,13 @@ $n$   = {_format_number(n)}"""
         label = f"""Lognormal
 $A$   = {_format_number(A)}
 $\mu$   = {_format_number(mu)}
-$\sigma$  = {_format_number(sigma)}"""
+$\\sigma$  = {_format_number(sigma)}"""
     
     elif kind == 'poisson':
         A, lmbda = coeffs
         label = f"""Poisson
 $A$   = {_format_number(A)}
-$\lambda$ = {_format_number(lmbda)}"""
+$\\lambda$ = {_format_number(lmbda)}"""
         
     elif kind == 'linear':
         A, B = coeffs
