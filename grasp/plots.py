@@ -348,7 +348,7 @@ def histogram(
     kde_kind: str = "gaussian",
     out: bool = False,
     **kwargs: dict[str,_T.Any],
-):
+) -> _T.Optional[dict[str, _T.Any]]:
     """
     Plots the data distribution with a histogram. The number of bins is defined
     as 1.5*sqrt(N). If kde is True, the kernel density estimation will be

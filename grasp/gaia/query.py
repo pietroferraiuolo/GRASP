@@ -201,12 +201,12 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         self.last_result = None
         self.last_query = None
         self._queryInfo: dict[str,dict[str,_gt.Any|_u.Quantity|float|str]] = {
-            "Scan Info": {
+            "Scan_Info": {
                 "RA": "None",
                 "DEC": "None",
-                "Scan Radius": "None",
-                "Data Acquired": "None",
-                "Conditions Applied": "None",
+                "Scan_Radius": "None",
+                "Data_Acquired": "None",
+                "Conditions_Applied": "None",
             }
         }
         print(f"Initialized with Gaia table: '{gaia_table}'")
@@ -263,7 +263,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         job = _Gaia.launch_job_async(adql_cmd)
         result = job.get_results()
         name = "UntrackedData"
-        self._queryInfo["Scan Info"]["Command"] = adql_cmd
+        self._queryInfo["Scan_Info"]["Command"] = adql_cmd
         if save:
             self._saveQuery(result, name)
         return result
@@ -326,10 +326,10 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
         self._queryInfo = {
-            "Scan Info": {"RA": ra, "DEC": dec, "Scan Radius": radius}
+            "Scan_Info": {"RA": ra, "DEC": dec, "Scan_Radius": radius}
         }
         dat = get_kwargs(("data", "dat", "params", "parameters"), "source_id", kwargs)
-        self._queryInfo["Scan Info"]["Data Acquired"], _ = self._formatCheck(
+        self._queryInfo["Scan_Info"]["Data_Acquired"], _ = self._formatCheck(
             dat, "None"
         )
         cond = get_kwargs(("cond", "conds", "conditions", "condition"), "None", kwargs)
@@ -338,12 +338,12 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             for c in range(len(cond) - 1):
                 ccond += cond[c] + ", "
             ccond += cond[-1]
-            self._queryInfo["Scan Info"]["Conditions Applied"] = ccond
+            self._queryInfo["Scan_Info"]["Conditions_Applied"] = ccond
         else:
-            self._queryInfo["Scan Info"]["Conditions Applied"] = cond
+            self._queryInfo["Scan_Info"]["Conditions_Applied"] = cond
         samp = self._run_query(savename, ra, dec, radius, dat, cond, save)
         sample = Sample(samp, gc=gc)
-        sample.qinfo = self._queryInfo["Scan Info"]
+        sample.qinfo = self._queryInfo["Scan_Info"]
         return sample
 
     def get_astrometry(
@@ -397,7 +397,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error,\
               pmra, pmra_error, pmdec, pmdec_error"
         astro_sample = self.free_gc_query(radius, gc, save, data=astrometry, **kwargs)
-        self._queryInfo["Scan Info"]["Data Acquired"] = astrometry
+        self._queryInfo["Scan_Info"]["Data_Acquired"] = astrometry
         return astro_sample
 
     def get_photometry(
@@ -452,7 +452,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, \
               phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
         phot_sample = self.free_gc_query(radius, gc, save, data=photometry, **kwargs)
-        self._queryInfo["Scan Info"]["Data Acquired"] = photometry
+        self._queryInfo["Scan_Info"]["Data_Acquired"] = photometry
         return phot_sample
 
     def get_rv(
@@ -513,7 +513,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         rv_sample = self.free_gc_query(
             radius, gc, save, data=rv, conditions=conditions, **kwargs
         )
-        self._queryInfo["Scan Info"]["Data Acquired"] = rv
+        self._queryInfo["Scan_Info"]["Data_Acquired"] = rv
         return rv_sample
 
 
@@ -628,7 +628,7 @@ Loading it..."""
             The dictionary with the header added.
 
         """
-        sinfo = self._queryInfo["Scan Info"]
+        sinfo = self._queryInfo["Scan_Info"]
         header = {
             "OBJECT": (
                 name.upper() if not name.upper() == "UNTRACKEDDATA" else "UNDEF",
@@ -643,16 +643,16 @@ Loading it..."""
                 "declination of scan centre [deg]",
             ),
             "RADIUS": (
-                sinfo["Scan Radius"],
+                sinfo["Scan_Radius"],
                 "radius of scan circle [deg]",
             ),
             "CONDS": (
-                not sinfo["Conditions Applied"] == "None",
-                "conditions applied to the query",
+                not sinfo["Conditions_Applied"] == "None",
+                "Conditions_Applied to the query",
             ),
         }
         if header["CONDS"] is True:
-            for i, c in enumerate(self._queryInfo["Scan Info"]["Conditions Applied"]):
+            for i, c in enumerate(self._queryInfo["Scan_Info"]["Conditions_Applied"]):
                 header[f"COND{i}"] = c
         for key, value in header.items():
             data.meta[key] = value
@@ -752,7 +752,7 @@ Loading it..."""
         dec : str
             Declination.
         radius : str
-            Scan radius.
+            Scan_Radius.
         data : str
             Data to retrieve.
         conditions : list of str
@@ -847,17 +847,17 @@ Loading it..."""
             if _os.path.exists(file_path):
                 config.read(file_path)
                 try:
-                    data_acquired = config["Scan Info"]["Data Acquired"]
-                    conditions_applied = config["Scan Info"]["Conditions Applied"]
-                    scan_radius = config["Scan Info"]["Scan Radius"]
+                    data_acquired = config["Scan_Info"]["Data_Acquired"]
+                    conditions_applied = config["Scan_Info"]["Conditions_Applied"]
+                    scan_radius = config["Scan_Info"]["Scan_Radius"]
                 except KeyError as e:
                     print(f"Key error: {e}")
                     continue
                 if (
-                    data_acquired == self._queryInfo["Scan Info"]["Data Acquired"]
+                    data_acquired == self._queryInfo["Scan_Info"]["Data_Acquired"]
                     and conditions_applied
-                    == self._queryInfo["Scan Info"]["Conditions Applied"]
-                    and scan_radius == str(self._queryInfo["Scan Info"]["Scan Radius"])
+                    == self._queryInfo["Scan_Info"]["Conditions_Applied"]
+                    and scan_radius == str(self._queryInfo["Scan_Info"]["Scan_Radius"])
                 ):
                     check = (True, tn.split("/")[-1])
                     break

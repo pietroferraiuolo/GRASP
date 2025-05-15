@@ -80,6 +80,44 @@ def XD_estimator(
     return model
 
 
+def kfold_gmm_estimator(data: _T.ArrayLike, folds:int, **gmm_params: dict['str,_T.Any']) -> _T.GMModel:
+    """
+    K-Fold Gaussian Mixture Model Estimation function.
+
+    This function fits a K-Fold Gaussian Mixture Model (GMM) to the input data.
+    The GMM is a probabilistic model that can be used to estimate the underlying
+    distribution of a dataset. The function uses the `mclust` R package to fit the
+    model.
+
+    Parameters
+    ----------
+    data : numpy.ndarray
+        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
+    folds : int
+        The number of folds for cross-validation.
+    **gmm_params : optional
+        Additional keyword arguments for the R GM_model function. See
+        <a href="https://cran.r-project.org/web/packages/mclust/mclust.pdf">
+        mclust</a> documentation for more information.
+
+    Returns
+    -------
+    fitted_model : grasp.KFoldGMM
+        The fitted gaussian mixture model and its parameters.
+    """
+    _checkRpackages("mclust")
+    _np2r.activate()
+    code = _os.path.join(_RSF, "gaussian_mixture.R")
+    _R(f'source("{code}")')
+    r_data = _np2r.numpy2rpy(data)
+    # Convert kwargs to R list
+    r_kwargs = _ro.vectors.ListVector(gmm_params)
+    # Call the R function with the data and additional arguments
+    fitted_model = _genv["KFoldGMM"](r_data, folds, **dict(r_kwargs.items()))
+    _np2r.deactivate()
+    return _rm.KFoldGMM(fitted_model)
+
+
 def gaussian_mixture_model(
     train_data: _T.Array,
     fit_data: _T.Optional[_T.Array] = None,

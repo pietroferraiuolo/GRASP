@@ -20,16 +20,11 @@ if TYPE_CHECKING:
     from grasp.analyzers._Rcode.r2py_models import (
         GaussianMixtureModel,
         PyRegressionModel,
-        RegressionModel
+        RegressionModel,
+        KFoldGMM
     )
 
 
-TabularData: TypeAlias = Union[
-    "Sample",
-    DataFrame,
-    Table,
-    QTable
-]
 
 AstroTable: TypeAlias = Union[
     DataFrame,
@@ -47,10 +42,12 @@ class _SampleProtocol(Protocol):
     def __getitem__(self, key: str) -> ArrayLike: ...
     def __getattr__(self, attr: str) -> Any | ArrayLike | "Sample": ...
     @property
-    def sample(self) -> AstroTable: ...
-    @property
     def gc(self) -> Optional["Cluster"]: ...
     def join(self, other: "Sample", keep: str, inplace: bool) -> "Sample": ...
+    def dropna(self, inplace: bool = False) -> "Sample": ...
+
+TabularData = TypeVar("TabularData", bound=_SampleProtocol)
+
 
 @runtime_checkable
 class _ModelProtocol(Protocol):
@@ -68,7 +65,7 @@ RegressionModels: TypeAlias = Union[
     "PyRegressionModel"
 ]
 
-GMModel: TypeAlias = "GaussianMixtureModel"
+GMModel: TypeAlias = Union["GaussianMixtureModel","KFoldGMM"]
 
 Model = TypeVar("Model", bound=_ModelProtocol)
 

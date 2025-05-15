@@ -498,3 +498,78 @@ $B$   = {_format_number(B)}"""
         )
         
     return label
+
+
+class KFoldGMM:
+    """
+    Python wrapper for the result of K-fold cross-validation of a Gaussian Mixture Model (Mclust) in R.
+    """
+    def __init__(self, r_result: object):
+        """
+        Parameters
+        ----------
+        r_result : rpy2.robjects.ListVector or dict
+            The result returned by the R KFoldGMM function.
+        """
+        self.r_result = r_result
+        self.model = _listvector_to_dict(r_result)
+
+    def __repr__(self) -> str:
+        return f"KFoldGMM_Cross-Validation(K={self.n_folds}, mean_loglik={self.mean_loglik:.3f}, mean_bic={self.mean_bic:.3f})"
+
+    def __str__(self) -> str:
+        return (
+            f"K-Fold GMM Cross-Validation Result\n"
+            f"-----------------------------------\n"
+            f"Folds: {self.n_folds}\n"
+            f"Mean Log-Likelihood: {self.mean_loglik:.3f}\n"
+            f"Mean BIC: {self.mean_bic:.3f}\n"
+            f"Log-Likelihoods: {self.logliks}\n"
+            f"BICs: {self.bics}\n"
+        )
+
+    @property
+    def mean_loglik(self) -> float:
+        """
+        The mean log-likelihood across all folds.
+        """
+        return float(self.model.get("mean_loglik", float('nan')))
+
+    @property
+    def mean_bic(self) -> float:
+        """
+        The mean BIC across all folds.
+        """
+        return float(self.model.get("mean_bic", float('nan')))
+
+    @property
+    def logliks(self) -> list:
+        """
+        List of log-likelihoods for each fold.
+        """
+        return list(self.model.get("logliks", []))
+
+    @property
+    def bics(self) -> list:
+        """
+        List of BIC values for each fold.
+        """
+        return list(self.model.get("bics", []))
+
+    @property
+    def n_folds(self) -> int:
+        """
+        Number of folds used in cross-validation.
+        """
+        return len(self.logliks)
+
+    @property
+    def models(self) -> list[GaussianMixtureModel]:
+        """
+        List of fitted GMM models for each fold, as GaussianMixtureModel instances.
+        """
+        r_models = self.model.get("models", [])
+        # If r_models is a single model, wrap in list
+        if not isinstance(r_models, list):
+            r_models = [r_models]
+        return [GaussianMixtureModel(r_model) for r_model in r_models]

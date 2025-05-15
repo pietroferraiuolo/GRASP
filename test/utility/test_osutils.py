@@ -43,7 +43,7 @@ class TestOsutils(unittest.TestCase):
         # Mock the listdir and join functions
         mock_listdir.return_value = ['file1.txt', 'file2_data.txt', 'file3.txt']
         mock_join.side_effect = lambda *args: '/'.join(args)
-        mock_findTracknum.return_value = '/basepath/folder1'
+        mock_findTracknum.return_value = '/basepath/folder1/tn1'
 
         # Test with tn and key
         result = osu.get_file_list(tn='tn1', key='_data')

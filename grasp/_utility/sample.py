@@ -130,14 +130,14 @@ class Sample(_QTable):
 
 
     def join(
-        self, other: "Sample", keep: str = "both", inplace: bool = False
-    ) -> "Sample":
+        self, other: _gt.TabularData, keep: str = "both", inplace: bool = False
+    ) -> _gt.TabularData:
         """
         Joins the sample data with another sample data.
 
         Parameters
         ----------
-        other : grasp.Sample
+        other : TabularData
             The other sample data to join with.
         keep : str
             The type of join to perform. Can be 'left_only', 'right_only', or 'both'.
@@ -146,7 +146,7 @@ class Sample(_QTable):
 
         Returns
         -------
-        sample : grasp.Sample
+        sample : TabularData
             The sample object containing the joined data.
         """
         sample = self.to_pandas()
@@ -177,7 +177,7 @@ class Sample(_QTable):
             new_sample.drop_columns(["_merge"])
             return new_sample
 
-    def dropna(self, inplace: bool = True) -> _gt.QTable | None:
+    def dropna(self, inplace: bool = True) -> None|_gt.TabularData:
         """
         Drops rows with NaN values from the sample data.
 
@@ -223,7 +223,7 @@ class Sample(_QTable):
         return super().to_pandas(*args, **kwargs)
 
 
-    def to_numpy(self, columns: list[str] = None):
+    def to_numpy(self, columns: list[str] = None) -> _gt.Array:
         """
         Converts the sample data to a numpy array.
 
@@ -283,13 +283,13 @@ class Sample(_QTable):
 
     def apply_conditions(
         self, conditions: str | list[str] | dict[str, str], inplace: bool = False
-    ):
+    ) -> _gt.TabularData:
         """
         Applies conditions to the sample data.
 
         Parameters
         ----------
-        conditions : dict
+        conditions : str or list[str] or dict[str, str]
             The conditions to apply.
         inplace : bool
             If True, the operation is done in place, otherwise a new object is returned.
@@ -342,7 +342,8 @@ class Sample(_QTable):
                 self[col] = filtered_sample[col]
             #self = QTable.from_pandas(filtered_sample)
             #self.meta = meta_bck
-            return self.__repr__()
+            print(self.__repr__())
+            return
         else:
             return Sample(filtered_sample, self.gc)
 
