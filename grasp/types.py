@@ -6,7 +6,8 @@ from typing import (
     Any,
     Optional,
     Protocol,
-    TypeAlias
+    TypeAlias,
+    runtime_checkable
 )
 from numpy.typing import ArrayLike
 from pandas import DataFrame, Series
@@ -41,7 +42,7 @@ GcInstance: TypeAlias = Union[
     "Cluster",
 ]
 
-
+@runtime_checkable
 class _SampleProtocol(Protocol):
     def __getitem__(self, key: str) -> ArrayLike: ...
     def __getattr__(self, attr: str) -> Any | ArrayLike | "Sample": ...
@@ -51,12 +52,14 @@ class _SampleProtocol(Protocol):
     def gc(self) -> Optional["Cluster"]: ...
     def join(self, other: "Sample", keep: str, inplace: bool) -> "Sample": ...
 
-class _RegressionProtocol(Protocol):
+@runtime_checkable
+class _ModelProtocol(Protocol):
     @property
     def model(self) -> dict[str, Any]: ...
     @property
     def coeffs(self) -> ArrayLike: ...
     def predict(self, data: ArrayLike) -> ArrayLike: ...
+
 
 FittingFunc: TypeAlias = Union[str, Callable[..., float]]
 
@@ -65,10 +68,9 @@ RegressionModels: TypeAlias = Union[
     "PyRegressionModel"
 ]
 
-RRegressionModel: TypeAlias = "RegressionModel"
-PRegressionModel: TypeAlias = "PyRegressionModel"
-
 GMModel: TypeAlias = "GaussianMixtureModel"
+
+Model = TypeVar("Model", bound=_ModelProtocol)
 
 Array: TypeAlias = Union[
     ArrayLike,

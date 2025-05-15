@@ -121,6 +121,12 @@ Predicted : {self._predicted}
         """
         return self.model["uncertainty"]
 
+    @property
+    def coeffs(self):
+        """
+        The coefficients of the model.
+        """
+        return self.model['parameters']["mean"]
 
     def predict(self, data):
         """

@@ -3,19 +3,14 @@ library("minpack.lm")
 regression <- function(data, method, bins, verb = FALSE) {
   if (is.character(bins) && bins == 'detailed') {
     N <- seq(min(data), max(data), length.out = ceiling(1.5 * sqrt(length(data))))
-    # Ensure min and max are included
-    N[1] <- min(data)
-    N[length(N)] <- max(data)
   } else if (is.numeric(bins)) {
     N <- bins
-    # Ensure min and max are included
-    N[1] <- min(data)
-    N[length(N)] <- max(data)
   } else {
     N <- seq(min(data), max(data), length.out = bins + 1)
-    N[1] <- min(data)
-    N[length(N)] <- max(data)
   }
+  # Ensure min and max are included
+  N[1] <- min(data)
+  N[length(N)] <- max(data)
   hist_data <- hist(data, breaks = N, plot = FALSE)
   x <- hist_data$mids  # The midpoint of histogram bins
   y <- hist_data$counts  # The count in each bin

@@ -172,8 +172,8 @@ def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | li
             fold = _findTracknum(tn, complete_path=True)
             fl = sorted(
                 [
-                    _os.path.join(fold, tn, file)
-                    for file in _os.listdir(_os.path.join(fold, tn))
+                    _os.path.join(fold, file)
+                    for file in _os.listdir(fold)
                 ]
             )
         else:

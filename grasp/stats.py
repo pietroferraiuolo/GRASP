@@ -216,7 +216,7 @@ def fit_distribution(
     method: str = "gaussian",
     verbose: bool = True,
     plot: bool = False,
-) -> _T.RRegressionModel:
+) -> _T.RegressionModels:
     """
     Regression model estimation function.
 
