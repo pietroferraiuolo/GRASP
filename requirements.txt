@@ -12,3 +12,4 @@ astroquery==0.4.7
 gaiadr3-zeropoint
 nsstools
 antlr4-python3-runtime==4.11
+tabulate
