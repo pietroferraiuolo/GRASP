@@ -254,7 +254,7 @@ class Sample(_QTable):
             self.add_column(col.copy())
 
 
-    def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> str:
+    def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> None:
         """
         Updates the parameters of the cluster object.
 
@@ -278,7 +278,8 @@ class Sample(_QTable):
                 raise AttributeError(
                     f"'Cluster' object has no attribute '{key}'\n{ptxt}"
                 )
-        return str(self.gc)
+        print(self.gc.__str__())
+        return
 
 
     def apply_conditions(

@@ -25,7 +25,6 @@ if TYPE_CHECKING:
     )
 
 
-
 AstroTable: TypeAlias = Union[
     DataFrame,
     Table,
