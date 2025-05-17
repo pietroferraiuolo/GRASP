@@ -129,6 +129,13 @@ Predicted : {self._predicted}
         """
         return self.model['parameters']["mean"]
 
+    @property
+    def covmats(self):
+        """
+        The covariance matrices of the model.
+        """
+        return self.model['parameters']["variance"]["covMats"]
+
     def predict(self, data):
         """
         Predict the membership probability of each data point to each component.
@@ -162,7 +169,7 @@ Predicted : {self._predicted}
         `model <- readRDS(filename)`, and in python, with 
         
         ```python
-        model = grasp.RegressionModel()
+        model = grasp.GaussianMixtureModel()
         model.load_model(filename)
         ```
         
@@ -176,6 +183,7 @@ Predicted : {self._predicted}
             filename += '.rds'
         _ro.r('saveRDS')(self.rmodel, file=filename)
         print(f"Model saved to {filename}")
+
 
     @classmethod
     def load_model(cls, filename):
@@ -195,13 +203,15 @@ Predicted : {self._predicted}
 
 
     def _manage_parameters(self):
-        sigma = self.model["parameters"]["variance"]["sigma"]
-        # Handle different shapes of sigma
-        self.model["parameters"]["variance"]["covMats"] = _np.reshape(sigma, (self.ndG[2], self.ndG[1], self.ndG[1]))
-        self.model["parameters"]["mean"] = _np.reshape(_np.array(self.model["parameters"]["mean"]), (self.ndG[2], self.ndG[1]))
+        covmats = _np.array(self.model["parameters"]["variance"]["sigma"])
+        params  = _np.array(self.model["parameters"]["mean"])
+        if not (covmats.shape == (self.ndG[2], self.ndG[1], self.ndG[1]) and params.shape == (self.ndG[2], self.ndG[1])):
+            self.model["parameters"]["variance"]["covMats"] = _np.reshape(covmats, (self.ndG[2], self.ndG[1], self.ndG[1]))
+            self.model["parameters"]["mean"] = _np.reshape(params, (self.ndG[2], self.ndG[1]))
         keys_to_remove = ["modelName", "d", "G", "sigma", "scale", 'shape']
         for key in keys_to_remove:
             self.model["parameters"]['variance'].pop(key, None)
+        return
 
 
 
