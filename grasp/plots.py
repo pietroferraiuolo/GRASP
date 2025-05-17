@@ -347,6 +347,7 @@ def histogram(
     kde: bool = False,
     kde_kind: str = "gaussian",
     out: bool = False,
+    dont_show: bool = False,
     **kwargs: dict[str,_T.Any],
 ) -> _T.Optional[dict[str, _T.Any]]:
     """
@@ -374,6 +375,12 @@ def histogram(
         - 'lorentzian'
         - 'lognormal'
         - 'power'
+    out : bool, optional
+        If True, the function will return the histogram data. If "kde" is True,
+        the KDE results are in the output. The default is False.
+    dont_show : bool, optional
+        If True, the function will not show the plot and only output the histogram
+        data. The default is False.
 
     Other Parameters
     ----------------
@@ -467,6 +474,8 @@ def histogram(
         _plt.legend(loc="best", fontsize="medium")
     if xlim is not None:
         _plt.xlim(xlim)
+    if dont_show:
+        return res
     _plt.show()
     return res if out else None
 

@@ -98,7 +98,7 @@ class Cluster:
         """
         self.__dict__[name] = value
 
-    def show_model(self, **kwargs: dict[str,_Any]):
+    def show_model(self, figure_out: bool = False, **kwargs: dict[str,_Any]):
         """
         Function for plotting the loaded king model.
 
@@ -112,13 +112,15 @@ class Cluster:
         scale: _Optional[str] = kwargs.get("scale", None)
         xscale: _Optional[str] = kwargs.get("xscale", None)
         yscale: _Optional[str] = kwargs.get("yscale", None)
+        xlim : _Optional[tuple[float]] = kwargs.get("xlim", None)
+        ylim : _Optional[tuple[float]] = kwargs.get("ylim", None)
         c: str = kwargs.get("color", "black")
         grid: bool = kwargs.get("grid", False)
-        plt.figure(figsize=(8, 6))
+        fig = plt.figure(figsize=(8, 6))
         plt.plot(self.model["xi"], self.model["w"], color=c)
         plt.plot(
             [self.model["xi"].min(), self.model["xi"].min()],
-            [self.model["w"].min() - 1, self.model["w"].max()],
+            [self.model["w"].min() - 0.1, self.model["w"].max()],
             c="red",
             linestyle="--",
             label=rf"$W_0$={self.model['w'].max():.2f}",
@@ -126,16 +128,21 @@ class Cluster:
         plt.xlabel(r"$\xi$ = $\dfrac{r}{r_t}$", fontdict=label_font)
         plt.ylabel("w", fontdict=label_font)
         plt.title("Integrated King Model", fontdict=title_font)
-        plt.ylim(-0.2, self.model["w"].max() + 0.2)
-        plt.xlim(-0.05, 1.05)
+        plt.ylim(ylim)
+        plt.xlim(xlim)
         if grid:
             plt.grid()
-        if xscale is not None or scale is not None:
+        if scale is not None:
             plt.xscale(scale)
-        if yscale is not None or scale is not None:
             plt.yscale(scale)
+        elif xscale is not None:
+            plt.xscale(xscale)
+        elif yscale is not None:
+            plt.yscale(yscale)        
         plt.legend(loc="best")
         plt.show()
+        if figure_out:
+            return fig
 
     def _load_cluster_parameters(self, name: str) -> pd.Series | pd.DataFrame:
         """
