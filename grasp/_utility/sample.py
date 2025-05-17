@@ -318,6 +318,7 @@ class Sample(_QTable):
         >>> conditions = ["parallax > -5", "parallax < 5"]
         """
         sample = (self.copy()).to_pandas()
+        N_old = len(sample)
         if isinstance(conditions, dict):
             conds = []
             for k, v in conditions.items():
@@ -335,15 +336,12 @@ class Sample(_QTable):
         mask = eval(conds)
         filtered_sample: _gt.DataFrame = sample[mask]
         if inplace:
-            #meta_bck = self.meta.copy()
-            # Remove all columns and add filtered columns
             for col in list(self.colnames):
                 self.remove_column(col)
             for col in filtered_sample.columns:
                 self[col] = filtered_sample[col]
-            #self = QTable.from_pandas(filtered_sample)
-            #self.meta = meta_bck
-            print(self.__repr__())
+            N_new = len(self)
+            print(f"Cut {(1-N_new/N_old)*100:.3f}% of the sample")
             return
         else:
             return Sample(filtered_sample, self.gc)
