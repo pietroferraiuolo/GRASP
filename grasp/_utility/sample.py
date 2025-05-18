@@ -336,10 +336,18 @@ class Sample(_QTable):
         mask = eval(conds)
         filtered_sample: _gt.DataFrame = sample[mask]
         if inplace:
+            # Store units before removing columns
+            col_units = {col: self[col].unit if hasattr(self[col], "unit") else None for col in self.colnames}
+            # Remove all columns
             for col in list(self.colnames):
                 self.remove_column(col)
+            # Add columns back, restoring units if present
             for col in filtered_sample.columns:
-                self[col] = filtered_sample[col]
+                unit = col_units.get(col, None)
+                if unit is not None:
+                    self[col] = filtered_sample[col].values * unit
+                else:
+                    self[col] = filtered_sample[col].values
             N_new = len(self)
             print(f"Cut {(1-N_new/N_old)*100:.3f}% of the sample")
             return

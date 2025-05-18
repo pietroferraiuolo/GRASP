@@ -80,7 +80,7 @@ def XD_estimator(
     return model
 
 
-def kfold_gmm_estimator(data: _T.ArrayLike, folds:int, **gmm_params: dict['str,_T.Any']) -> _T.GMModel:
+def kfold_gmm_estimator(data: _T.ArrayLike, folds:int, **gmm_params: dict[str,_T.Any]) -> _T.GMModel:
     """
     K-Fold Gaussian Mixture Model Estimation function.
 
@@ -462,6 +462,198 @@ def fit_data_points(
 
         regressionPlot(model, f_type="datapoint")
     return model
+
+
+
+def bootstrap_statistic(
+    data: _T.Array,
+    statistic_function: _T.Callable[...,_T.Any],
+    n_bootstrap: int = 1000,
+    confidence_level: float = 0.68,
+    method: str = 'percentile',
+    parallel: bool = False,
+    n_jobs: _T.Optional[int] = None,
+    show_progress: bool = True,
+    return_bootstrap_distribution: bool = False,
+    random_seed: _T.Optional[int] = None,
+    *args: _T.Any,
+    **kwargs: _T.Any
+) -> tuple[float, float, _T.Optional[_T.Array]]:
+    """
+    Calculate any statistic with uncertainty using bootstrap resampling,
+    optimized for astrophysical data analysis.
+    
+    Parameters
+    ----------
+    data : np.ndarray
+        Input data array. Can be 1D or 2D (for multivariate data).
+    statistic_function : callable
+        Function that computes the desired statistic. Should accept the
+        data array as first argument and return a scalar or array.
+    n_bootstrap : int, optional
+        Number of bootstrap iterations. Default is 1000.
+    confidence_level : float, optional
+        Confidence level for uncertainty estimation (between 0 and 1).
+        Default is 0.68 (roughly equivalent to 1-sigma).
+    method : str, optional
+        Method for computing confidence intervals:
+        - 'percentile': Uses percentiles of bootstrap distribution
+        - 'std': Uses standard deviation of bootstrap distribution
+        Default is 'percentile'.
+    parallel : bool, optional
+        Whether to use parallel processing. Default is False.
+    n_jobs : int, optional
+        Number of processes to use for parallel execution.
+        If None, uses all available CPUs. Default is None.
+    show_progress : bool, optional
+        Whether to display a progress bar. Default is True.
+    return_bootstrap_distribution : bool, optional
+        Whether to return the bootstrap distribution. Default is False.
+    random_seed : int, optional
+        Random seed for reproducibility. Default is None.
+    *args, **kwargs
+        Additional arguments passed to statistic_function.
+        
+    Returns
+    -------
+    tuple
+        (statistic_value, uncertainty, bootstrap_distribution) if return_bootstrap_distribution=True
+        (statistic_value, uncertainty) otherwise
+        
+    Examples
+    --------
+    >>> import numpy as np
+    >>> # Calculate median and its uncertainty
+    >>> data = np.random.normal(100, 15, 50)  # Simulated astronomical measurements
+    >>> median, uncertainty = bootstrap_statistic(data, np.median)
+    >>> print(f"Median: {median:.1f} ± {uncertainty:.1f}")
+    
+    >>> # Calculate mean and its asymmetric uncertainty (for skewed distributions)
+    >>> from astropy.stats import sigma_clipped_mean
+    >>> mean, uncertainty, dist = bootstrap_statistic(
+    ...     data, sigma_clipped_mean, method='percentile', confidence_level=0.95, 
+    ...     return_bootstrap_distribution=True)
+    >>> lower, upper = np.percentile(dist, [2.5, 97.5])  # 95% confidence interval
+    >>> print(f"Mean: {mean:.1f} +{upper-mean:.1f} -{mean-lower:.1f}")
+    """
+    from tqdm import tqdm as _tqdm
+    from multiprocessing import Pool as _Pool, cpu_count as _ncpu
+    
+    # Input validation
+    data = _np.asarray(data)
+    if data.size == 0:
+        raise ValueError("Input data array is empty")
+    
+    if n_bootstrap <= 0:
+        raise ValueError("Number of bootstrap iterations must be positive")
+    
+    if not (0 < confidence_level < 1):
+        raise ValueError("Confidence level must be between 0 and 1")
+    
+    if method not in ['percentile', 'std']:
+        raise ValueError("Method must be either 'percentile' or 'std'")
+    
+    # Set random seed for reproducibility if specified
+    if random_seed is not None:
+        _np.random.seed(random_seed)
+    
+    # Try to compute the statistic on the original data to check if it works
+    try:
+        original_statistic = statistic_function(data, *args, **kwargs)
+    except Exception as e:
+        raise ValueError(f"Failed to compute statistic on input data: {str(e)}")
+    
+    # Determine array shape and setup bootstrap samples
+    n_samples = data.shape[0]
+    bootstrap_statistics = _np.zeros((n_bootstrap,) + _np.shape(original_statistic))
+    
+    # Generate bootstrap indices in advance
+    all_indices = [_np.random.choice(n_samples, size=n_samples, replace=True) 
+                  for _ in range(n_bootstrap)]
+    
+    # Run bootstrap iterations
+    if parallel and n_bootstrap > 50:  # Only use parallel for larger bootstrap sizes
+        n_proc = n_jobs if n_jobs is not None else _ncpu()
+        
+        # Prepare arguments for parallel execution
+        all_args = [(data, indices, statistic_function, args, kwargs) 
+                   for indices in all_indices]
+        
+        with _Pool(processes=n_proc) as pool:
+            iter_func = pool.imap(_bootstrap_helper, all_args)
+            if show_progress:
+                iter_func = _tqdm(iter_func, total=n_bootstrap, desc="Bootstrap")
+            
+            bootstrap_statistics = _np.array(list(iter_func))
+    else:
+        iter_range = _tqdm(range(n_bootstrap), desc="Bootstrap") if show_progress else range(n_bootstrap)
+        for i in iter_range:
+            # Directly call the helper function with the prepared arguments
+            bootstrap_statistics[i] = _bootstrap_helper(
+                (data, all_indices[i], statistic_function, args, kwargs)
+            )
+    
+    # Check for NaNs from failed computations
+    nan_mask = _np.isnan(bootstrap_statistics)
+    if _np.isscalar(original_statistic):
+        nan_count = _np.sum(nan_mask)
+    else:
+        nan_count = _np.sum(nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim))))
+    
+    if nan_count > 0:
+        print(f"Warning: {nan_count} bootstrap iterations failed and were excluded")
+        if _np.isscalar(original_statistic):
+            bootstrap_statistics = bootstrap_statistics[~nan_mask]
+        else:
+            bootstrap_statistics = bootstrap_statistics[~nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim)))]
+        
+    if len(bootstrap_statistics) == 0:
+        raise RuntimeError("All bootstrap iterations failed")
+    
+    # Calculate uncertainty
+    if method == 'percentile':
+        alpha = (1 - confidence_level) / 2
+        lower_percentile = alpha * 100
+        upper_percentile = (1 - alpha) * 100
+        
+        if _np.isscalar(original_statistic):
+            lower, upper = _np.percentile(bootstrap_statistics, [lower_percentile, upper_percentile])
+            uncertainty = (upper - lower) / 2  # Average of the two-sided interval
+        else:
+            # Handle multidimensional statistics
+            uncertainty = _np.zeros_like(original_statistic)
+            for idx in _np.ndindex(original_statistic.shape):
+                idx_tuple = idx if len(idx) > 0 else 0
+                stat_at_idx = bootstrap_statistics[(slice(None),) + idx]
+                lower, upper = _np.percentile(stat_at_idx, [lower_percentile, upper_percentile])
+                uncertainty[idx] = (upper - lower) / 2
+    else:  # 'std' method
+        uncertainty = _np.std(bootstrap_statistics, axis=0, ddof=1)
+    
+    if return_bootstrap_distribution:
+        return original_statistic, uncertainty, bootstrap_statistics
+    return original_statistic, uncertainty
+
+
+
+# Define this helper function at module level so it can be pickled
+def _bootstrap_helper(args):
+    """Helper function for bootstrap resampling that can be pickled."""
+    data, indices, statistic_function, func_args, func_kwargs = args
+    try:
+        # Sample with replacement using the provided indices
+        if data.ndim == 1:
+            bootstrap_sample = data[indices]
+        else:
+            bootstrap_sample = data[indices, :]
+        
+        # Compute the statistic
+        return statistic_function(bootstrap_sample, *func_args, **func_kwargs)
+    except Exception:
+        # Return NaN if computation fails
+        shape = _np.shape(statistic_function(data, *func_args, **func_kwargs))
+        return _np.nan * _np.ones(shape) if shape else _np.nan
+
 
 
 def _get_function(name: str): # -> _T.FittingFunc[..., float]:
