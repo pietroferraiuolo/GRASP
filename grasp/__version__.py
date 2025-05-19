@@ -7,7 +7,7 @@ Information about the current version of the grasp package.
 __title__ = 'grasp'
 __long_title__ = 'GRASP : Globular clusteR Astrometry and Photometry Software'
 __description__ = 'Software to gather and analyze astrometric and photometric data, mainly retrieved from the GAIA archive and with a focus on globular clusters.'
-__version__ = '0.9.2'
+__version__ = '0.9.3'
 __author__ = 'Pietro Ferraiuolo'
 __author_email__ = 'pietro.ferraiuolo@inaf.it'
 __license__ = 'MIT License'

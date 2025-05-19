@@ -31,4 +31,9 @@ setuptools.setup(
     url=about['__url__'],
     license=about['__license__'],
     python_requires='>=3.10',
+    entry_points={
+        'console_scripts': [
+            'graspy = __init_scripts__.initGrasp:main',
+        ],
+    },
 )

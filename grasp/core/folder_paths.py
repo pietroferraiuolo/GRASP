@@ -1,7 +1,7 @@
 """
 Author(s)
 ---------
-    - Pietro Ferraiuolo : written in 2024
+- Pietro Ferraiuolo : written in 2024
 
 Description
 -----------
