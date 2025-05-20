@@ -25,7 +25,7 @@ from grasp.analyzers._Rcode import (
     check_packages as _checkRpackages, 
     r2py_models as _rm
 )
-from scipy.optimize import curve_fit
+from scipy.optimize import curve_fit as _curve_fit
 import rpy2.robjects as _ro
 from rpy2.robjects import (
     r as _R,
@@ -443,8 +443,8 @@ def fit_data_points(
             raise ValueError(
                 f"The provided function argument `f` must be either a string or a callable: {type(f)}"
             )
-        popt, pcov, infodict, _, _ = curve_fit(
-            f, x_data, data, *curvefit_args, full_output=True
+        popt, pcov, infodict, _, _ = _curve_fit(
+            f, x_data, data, full_output=True, *curvefit_args
         )
         y_fit = f(x_data, *popt)
         fitted = {
