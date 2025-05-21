@@ -53,16 +53,17 @@ GMMPredict <- function(
   return(cluster)
 }
 
-#' K-Fold Cross-Validation for Mclust GMM
-#'
-#' @param data Matrix or data.frame of features (n_samples x n_features)
-#' @param G Number of mixture components (or vector of possible G)
-#' @param K Number of folds (default: 5)
-#' @param ... Additional arguments passed to Mclust
-#' @return List with average log-likelihood, BIC, and per-fold results
 KFoldGMM <- function(data, K, G = 2, ...) {
-  library(mclust)
+  #' K-Fold Cross-Validation for Mclust GMM
+  #'
+  #' @param data Matrix or data.frame of features (n_samples x n_features)
+  #' @param G Number of mixture components (or vector of possible G)
+  #' @param K Number of folds (default: 5)
+  #' @param ... Additional arguments passed to Mclust
+  #' @return List with average log-likelihood, BIC, and per-fold results
   n <- nrow(data)
+  # Shuffle the data along the instance axis
+  data <- data[sample(n), , drop = FALSE]
   folds <- sample(rep(1:K, length.out = n))
   logliks <- numeric(K)
   bics <- numeric(K)

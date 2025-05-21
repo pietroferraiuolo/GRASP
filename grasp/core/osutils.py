@@ -170,6 +170,10 @@ def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | li
     else:
         if fold is None:
             fold = _findTracknum(tn, complete_path=True)
+            if len(fold) == 0:
+                raise FileNotFoundError(
+                    f"No data found with '{tn = }'"
+                )
             fl = sorted(
                 [
                     _os.path.join(fold, file)
