@@ -516,25 +516,25 @@ def bootstrap_statistic(
         
     Returns
     -------
-    tuple
-        (statistic_value, uncertainty, bootstrap_distribution) if return_bootstrap_distribution=True
-        (statistic_value, uncertainty) otherwise
+    (statistic_value, uncertainty, bootstrap_distribution) : if return_bootstrap_distribution=True
+    (statistic_value, uncertainty) : otherwise
         
     Examples
     --------
-    >>> import numpy as np
-    >>> # Calculate median and its uncertainty
-    >>> data = np.random.normal(100, 15, 50)  # Simulated astronomical measurements
-    >>> median, uncertainty = bootstrap_statistic(data, np.median)
-    >>> print(f"Median: {median:.1f} ± {uncertainty:.1f}")
-    
-    >>> # Calculate mean and its asymmetric uncertainty (for skewed distributions)
-    >>> from astropy.stats import sigma_clipped_mean
-    >>> mean, uncertainty, dist = bootstrap_statistic(
-    ...     data, sigma_clipped_mean, method='percentile', confidence_level=0.95, 
-    ...     return_bootstrap_distribution=True)
-    >>> lower, upper = np.percentile(dist, [2.5, 97.5])  # 95% confidence interval
-    >>> print(f"Mean: {mean:.1f} +{upper-mean:.1f} -{mean-lower:.1f}")
+    ```python
+    import numpy as np
+    # Calculate median and its uncertainty
+    data = np.random.normal(100, 15, 50)  # Simulated astronomical measurements
+    median, uncertainty = bootstrap_statistic(data, np.median)
+    print(f"Median: {median:.1f} ± {uncertainty:.1f}")
+    # Calculate mean and its asymmetric uncertainty (for skewed distributions)
+    from astropy.stats import sigma_clip
+    mean, uncertainty, dist = bootstrap_statistic(
+        data, sigma_clip, method='percentile', confidence_level=0.95, 
+        return_bootstrap_distribution=True)
+    lower, upper = np.percentile(dist, [2.5, 97.5])  # 95% confidence interval
+    print(f"Mean: {mean:.1f} +{upper-mean:.1f} -{mean-lower:.1f}")
+    ```
     """
     from tqdm import tqdm as _tqdm
     from multiprocessing import Pool as _Pool, cpu_count as _ncpu
