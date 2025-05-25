@@ -227,6 +227,7 @@ class Formulary:
             self.formulas[name] = new_formula
         else:
             self.formulas[name] = formula.subs(values)
+        print(self.formulas[name])
 
 
     def add_formula(self, name, formula):
@@ -497,7 +498,7 @@ def load_base_formulary():
 
 class _FormulaWrapper(_BaseFormula):
 
-    def __init__(self, name, formula, variables):
+    def __init__(self, name: str, formula, variables: list):
         """The constructor"""
         super().__init__()
         self._name = name
