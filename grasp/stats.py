@@ -39,7 +39,7 @@ def XD_estimator(
     data: _T.Array,
     errors: _T.Array,
     correlations: _T.Optional[dict[tuple[int, int], _T.Array]] = None,
-    **xdargs: tuple[str, ...],
+    *xdargs: tuple[str, ...],
 ):
     """
     Extreme Deconvolution Estimation function.
@@ -75,7 +75,7 @@ def XD_estimator(
         covariance_matrix = _construct_covariance_matrices(errors, correlations)
     else:
         covariance_matrix = _np.array([_np.diag(e**2) for e in errors]) # (n_samples, n_features, n_features)
-    model = XDGMM(random_state=_seed(), **xdargs)
+    model = XDGMM(random_state=_seed(), *xdargs)
     model.fit(x_data, covariance_matrix)
     return model
 
