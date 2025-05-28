@@ -7,15 +7,14 @@ Description
 -----------
 """
 
-from typing import Optional as _opt
+from numpy import nan_to_num
 from zero_point import zpt as _zpt
-from pandas import DataFrame as _DF
-from numpy.typing import ArrayLike as _array
+from grasp import types as _t
 
 
 def zero_point_correction(
-    *zargs: _opt[list[_array | float]], sample: _opt[_DF] = None
-) -> _array:
+    *zargs: _t.Optional[list[_t.Array|float]], sample: _t.Optional[_t.TabularData] = None
+) -> _t.Array:
     """
     Computes the parallax zero point correction for a given sample of stars,
     following the "recipe" given in the dited paper
@@ -69,15 +68,12 @@ Using the "Zero Point Correction" tool from Pau Ramos
 (Lindergren, et al., A&A 649, A4 (2021)"""
     )
     if sample is None:
-        sample: _array = _zpt.get_zpt(*zargs)
+        sample = _zpt.get_zpt(*zargs)
     else:
-        from grasp._utility.sample import Sample as _Sample
-        if isinstance(sample, _Sample):
-            zpc: _DF = _zpt.zpt_wrapper(sample.to_pandas())
-            sample.sample.add_column("zero_point_correction", zpc)
-        elif isinstance(sample, _DF):
-            zpc = _zpt.zpt_wrapper(sample)
-            sample["zero_point_correction"] = zpc
+        if isinstance(sample, _t._SampleProtocol):
+            if hasattr(sample, 'parallax'):
+                unit = sample.parallax.unit if hasattr(sample.parallax, 'unit') else 1
+                sample['parallax'] -= nan_to_num(_zpt.zpt_wrapper(sample.to_pandas())) * unit
         else:
             raise ValueError("The sample provided is not a valid Sample object.")
     return sample
