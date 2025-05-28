@@ -128,8 +128,6 @@ class Cluster:
         plt.xlabel(r"$\xi$ = $\dfrac{r}{r_t}$", fontdict=label_font)
         plt.ylabel("w", fontdict=label_font)
         plt.title("Integrated King Model", fontdict=title_font)
-        plt.ylim(ylim)
-        plt.xlim(xlim)
         if grid:
             plt.grid()
         if scale is not None:
@@ -138,7 +136,10 @@ class Cluster:
         elif xscale is not None:
             plt.xscale(xscale)
         elif yscale is not None:
-            plt.yscale(yscale)        
+            plt.yscale(yscale)
+        else:
+            plt.ylim(ylim)
+            plt.xlim(xlim)
         plt.legend(loc="best")
         plt.show()
         if figure_out:

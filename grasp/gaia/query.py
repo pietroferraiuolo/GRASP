@@ -380,6 +380,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Needed if no 'gc' object is supplied: if it is not given, and
             save was True, the data will be stored in the 'UntrackedData'
             folder.
+        add_data : str
+            List of additional parameters to retrieve, other than the standard astrometric
+            parameters already included.
         conditions : str or list of str
             List of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
@@ -394,8 +397,11 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         astro_cluster : astropy.Table
             Astropy table with  the query results.
         """
+        addata = kwargs.get("add_data", "")
         astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error,\
               pmra, pmra_error, pmdec, pmdec_error"
+        if not addata == "":
+            astrometry += ", " + addata
         astro_sample = self.free_gc_query(radius, gc, save, data=astrometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = astrometry
         return astro_sample
@@ -434,6 +440,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Needed if no 'gc' object is supplied: if it is not given, and
             save was True, the data will be stored in the 'UntrackedData'
             folder.
+        add_data : str
+            List of additional parameters to retrieve, other than the standard
+            photometric parameters already included.
         conditions : str or list of str
             Listo of conditions on the parameters to apply upon scanning the
             archive. If no conditions are supplied, no conditions are applied.
@@ -448,9 +457,11 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         photo_cluster : astropy.Table
             Astropy table with the results.
         """
-
+        addata = get_kwargs(("add_data"), "", kwargs)
         photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, \
               phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
+        if not addata == "":
+            photometry += ", " + addata
         phot_sample = self.free_gc_query(radius, gc, save, data=photometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = photometry
         return phot_sample

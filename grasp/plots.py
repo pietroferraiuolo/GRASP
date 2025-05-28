@@ -238,9 +238,9 @@ def colorMagnitude(
     fig, ax = _plt.subplots(nrows=1, ncols=1, figsize=fsize)
     ax.set_facecolor(bgc)
     if sample is not None:
-        g = sample["phot_g_mean_mag"]
-        b_r = sample["bp_rp"]
-        teff_gspphot = sample["teff_gspphot"]
+        g = sample["phot_g_mean_mag"].value
+        b_r = sample["bp_rp"].value
+        teff_gspphot = sample["teff_gspphot"].value
     elif g is None or b_r is None or teff_gspphot is not None:
         raise ValueError("You must provide a sample or the data fields.")
     _plt.scatter(b_r, g, c=teff_gspphot, alpha=a, cmap=cmap)
@@ -278,11 +278,11 @@ def properMotion(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     size = _osu.get_kwargs(("s", "size"), 3, kwargs)
     alpha = kwargs.get("alpha", 0.5)
     fsize = kwargs.get("figsize", default_figure_size)
-    pmra = sample["pmra"]
-    pmdec = sample["pmdec"]
+    pmra = sample["pmra"].value
+    pmdec = sample["pmdec"].value
     fig, ax = _plt.subplots(figsize=fsize)
-    _plt.xlabel(r"$\mu_{\alpha*}$ [deg]", fontdict=label_font)
-    _plt.ylabel(r"$\mu_\delta$ [deg]", fontdict=label_font)
+    _plt.xlabel(r"$\mu_{\alpha*}$ [mas yr$^{-1}$]", fontdict=label_font)
+    _plt.ylabel(r"$\mu_\delta$ [mas yr$^{-1}$]", fontdict=label_font)
     _plt.title("Proper Motion Distribution", fontdict=title_font)
     ax.axis("equal")
     _plt.scatter(pmra, pmdec, c=col, alpha=alpha, s=size)
@@ -329,8 +329,8 @@ def spatial(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     clabel = _osu.get_kwargs(("colorbar_label", "clabel", "cl"), "", kwargs)
     cmap = kwargs.get("cmap", "viridis")
     title = kwargs.get("title", "Spatial Distribution")
-    ra = sample["ra"]
-    dec = sample["dec"]
+    ra = sample["ra"].value
+    dec = sample["dec"].value
     fig, ax = _plt.subplots(figsize=fsize)
     _plt.xlabel(r"$DEC$ [deg]", fontdict=label_font)
     _plt.ylabel(r"$RA$ [deg]", fontdict=label_font)
