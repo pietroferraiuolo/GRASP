@@ -71,9 +71,13 @@ Using the "Zero Point Correction" tool from Pau Ramos
         sample = _zpt.get_zpt(*zargs)
     else:
         if isinstance(sample, _t._SampleProtocol):
-            if hasattr(sample, 'parallax'):
-                unit = sample.parallax.unit if hasattr(sample.parallax, 'unit') else 1
-                sample['parallax'] -= nan_to_num(_zpt.zpt_wrapper(sample.to_pandas())) * unit
+            if sample.zp_corrected is False:
+                if hasattr(sample, 'parallax'):
+                    unit = sample.parallax.unit if hasattr(sample.parallax, 'unit') else 1
+                    sample['parallax'] -= nan_to_num(_zpt.zpt_wrapper(sample.to_pandas())) * unit
+                    sample.zp_corrected = True
+            else:
+                print("Parallaxes already corrected with the ZP algorithm.")
         else:
             raise ValueError("The sample provided is not a valid Sample object.")
     return sample

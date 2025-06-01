@@ -33,7 +33,7 @@ setuptools.setup(
     python_requires='>=3.10',
     entry_points={
         'console_scripts': [
-            'graspy = __init_scripts__.initGrasp:main',
+            'graspy = init_scripts.initGrasp:main',
         ],
     },
 )

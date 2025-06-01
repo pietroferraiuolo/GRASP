@@ -75,6 +75,7 @@ class Sample(_QTable):
         else:
             self.gc = gc
         self._merge_info: _pd.DataFrame = None
+        self.zp_corrected: bool = False
 
     def __str__(self):
         """The string representation"""

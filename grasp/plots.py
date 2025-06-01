@@ -323,19 +323,20 @@ def spatial(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     """
     col = _osu.get_kwargs(("color", "c"), "black", kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
-    size = _osu.get_kwargs(("s", "size"), 5, kwargs)
-    alpha = kwargs.get("alpha", 0.5)
+    size = _osu.get_kwargs(("s", "size"), 0.5, kwargs)
+    alpha = kwargs.get("alpha", 0.15)
     colorbar = kwargs.get("colorbar", False)
     clabel = _osu.get_kwargs(("colorbar_label", "clabel", "cl"), "", kwargs)
-    cmap = kwargs.get("cmap", "viridis")
+    cmap = kwargs.get("cmap", None)
     title = kwargs.get("title", "Spatial Distribution")
+    axxis = kwargs.get("axis", "equal")
     ra = sample["ra"].value
     dec = sample["dec"].value
     fig, ax = _plt.subplots(figsize=fsize)
     _plt.xlabel(r"$DEC$ [deg]", fontdict=label_font)
     _plt.ylabel(r"$RA$ [deg]", fontdict=label_font)
     _plt.title(title, fontdict=title_font)
-    ax.axis("equal")
+    ax.axis(axxis)
     _plt.scatter(ra, dec, c=col, alpha=alpha, s=size, cmap=cmap)
     if colorbar:
         _plt.colorbar(label=clabel)
