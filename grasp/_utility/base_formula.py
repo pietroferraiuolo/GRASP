@@ -61,12 +61,14 @@ class BaseFormula(ABC):
     def computed_values(self) -> _ArrayLike:
         """Return the values"""
         return "Not computed" if self._values is None else self._values
+
     values: _ArrayLike = computed_values
 
     @property
     def computed_errors(self) -> _ArrayLike:
         """Return the errors"""
         return "Not computed" if self._errors is None else self._errors
+
     errors: _ArrayLike = computed_errors
 
     @property
@@ -109,12 +111,14 @@ class BaseFormula(ABC):
             The computed values.
         """
         from grasp.analyzers.calculus import compute_numerical_function
+
         print(
             f"""WARNING! Be sure that the input data follow this specific order: 
 Data:         {self.variables}"""
         )
         if errors is not None:
             from grasp.analyzers.calculus import compute_error
+
             print(
                 f"""Errors:       {self._errVariables}
 Correlations: {self._correlations}
@@ -136,4 +140,3 @@ Correlations: {self._correlations}
                 )
         self._values = compute_numerical_function(self._formula, self._variables, data)
         return self
-

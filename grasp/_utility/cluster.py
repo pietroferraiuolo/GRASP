@@ -1,4 +1,4 @@
-#from __future__ import annotations
+# from __future__ import annotations
 """
 Author(s)
 ---------
@@ -59,29 +59,29 @@ class Cluster:
     >>> ngc104 = Cluster('ngc104')
     """
 
-    def __init__(self, name: _Optional[str] = None, **params: dict[str,_Any]):
+    def __init__(self, name: _Optional[str] = None, **params: dict[str, _Any]):
         """The constructor"""
-        if name == 'UntrackedData' or name is None:
+        if name == "UntrackedData" or name is None:
             print("Not a Cluster: no model available")
             self.data_path: str = UNTRACKED_DATA_FOLDER
             self.id: str = "UntrackedData"
-            self.ra: _Optional[_Union[float,_Quantity]] = params.get("ra", None)
-            self.dec: _Optional[_Union[float,_Quantity]] = params.get("dec", None)
+            self.ra: _Optional[_Union[float, _Quantity]] = params.get("ra", None)
+            self.dec: _Optional[_Union[float, _Quantity]] = params.get("dec", None)
             self.model: _Optional[Table | pd.DataFrame] = None
         else:
             self.id = name.upper()
             self.data_path = CLUSTER_DATA_FOLDER(self.id)
             self.model_path = CLUSTER_MODEL_FOLDER(self.id)
             parms = self._load_cluster_parameters(self.id)
-            self.ra: _Quantity | float = parms.loc["ra"]      * u.deg
-            self.dec: _Quantity| float = parms.loc["dec"]     * u.deg
-            self.dist:_Quantity| float = parms.loc["dist"]    * u.kpc
+            self.ra: _Quantity | float = parms.loc["ra"] * u.deg
+            self.dec: _Quantity | float = parms.loc["dec"] * u.deg
+            self.dist: _Quantity | float = parms.loc["dist"] * u.kpc
             self.rc: _Quantity | float = parms.loc["rc"] / 60 * u.deg
             self.rh: _Quantity | float = parms.loc["rh"] / 60 * u.deg
-            self.w0: float             = parms.loc["w0"]
-            self.logc: float           = parms.loc["logc"]
+            self.w0: float = parms.loc["w0"]
+            self.logc: float = parms.loc["logc"]
             self.rt: _Quantity | float = self.rc * 10**self.logc
-            self.cflag: bool           = True if parms.loc["collapsed"] == "Y" else False
+            self.cflag: bool = True if parms.loc["collapsed"] == "Y" else False
             self.model: _Optional[Table | pd.DataFrame] = self._load_king_model()
 
     def __str__(self):
@@ -91,14 +91,14 @@ class Cluster:
     def __repr__(self):
         """Representation"""
         return self.__get_repr()
-    
+
     def __setattr__(self, name: str, value: _Any):
         """
         Set the attribute value.
         """
         self.__dict__[name] = value
 
-    def show_model(self, figure_out: bool = False, **kwargs: dict[str,_Any]):
+    def show_model(self, figure_out: bool = False, **kwargs: dict[str, _Any]):
         """
         Function for plotting the loaded king model.
 
@@ -112,8 +112,8 @@ class Cluster:
         scale: _Optional[str] = kwargs.get("scale", None)
         xscale: _Optional[str] = kwargs.get("xscale", None)
         yscale: _Optional[str] = kwargs.get("yscale", None)
-        xlim : _Optional[tuple[float]] = kwargs.get("xlim", None)
-        ylim : _Optional[tuple[float]] = kwargs.get("ylim", None)
+        xlim: _Optional[tuple[float]] = kwargs.get("xlim", None)
+        ylim: _Optional[tuple[float]] = kwargs.get("ylim", None)
         c: str = kwargs.get("color", "black")
         grid: bool = kwargs.get("grid", False)
         fig = plt.figure(figsize=(8, 6))
@@ -188,24 +188,32 @@ class Cluster:
                 model["rho"] = np.loadtxt(file, skiprows=1, usecols=3)
             except Exception:
                 import io, re
+
                 file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
                 with open(file, "r") as f:
                     content = f.read()
-                content_fixed = re.sub(r'(?<=[0-9])-(?=\d)', r' -', content)
-                model['xi'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=1)
-                model['w'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=2)
-                model['rho'] = np.loadtxt(io.StringIO(content_fixed), skiprows=1, usecols=3)
+                content_fixed = re.sub(r"(?<=[0-9])-(?=\d)", r" -", content)
+                model["xi"] = np.loadtxt(
+                    io.StringIO(content_fixed), skiprows=1, usecols=1
+                )
+                model["w"] = np.loadtxt(
+                    io.StringIO(content_fixed), skiprows=1, usecols=2
+                )
+                model["rho"] = np.loadtxt(
+                    io.StringIO(content_fixed), skiprows=1, usecols=3
+                )
         except FileNotFoundError:
             from grasp.analyzers.king import king_integrator
+
             print(
                 f"WARNING: no king model file found for '{self.id}'. Performing the Single-Mass King model integration."
             )
             if not os.path.exists(self.model_path):
                 os.mkdir(self.model_path)
-            result: str | list[str] = king_integrator(self.w0, output = 'profile')
+            result: str | list[str] = king_integrator(self.w0, output="profile")
             if isinstance(result, list):
                 result = result[0]  # Use the first file if result is a list
-            mod = pd.read_csv(result, sep=r'\s+', skipfooter=1, engine='python')
+            mod = pd.read_csv(result, sep=r"\s+", skipfooter=1, engine="python")
             model["xi"] = mod.xi
             model["w"] = mod.w
             model["rho"] = mod.rho_rho0
@@ -246,7 +254,6 @@ Harris Catalog 2010 edition Parameters
         return text
 
 
-
 def available_clusters():
     """
     Prints all the available clusters present tin the Harris Catalog 2010
@@ -259,8 +266,9 @@ def available_clusters():
         List of available clusters.
     """
     from tabulate import tabulate
+
     catalog = pd.read_excel(CATALOG_FILE, index_col=0)
     print(f"Available clusters: {len(catalog)}")
     gclist = catalog.index.tolist()
-    gclist = [gclist[i:i+7] for i in range(0,len(gclist),7)]
-    print(tabulate(gclist, tablefmt='simple'))
+    gclist = [gclist[i : i + 7] for i in range(0, len(gclist), 7)]
+    print(tabulate(gclist, tablefmt="simple"))

@@ -18,17 +18,21 @@ Functions
     integration routine.
 
 """
+
 import os
 import subprocess
 from grasp.core.osutils import get_file_list
 from grasp.core.folder_paths import KING_INTEGRATOR_FOLDER
+
 _king_dir = KING_INTEGRATOR_FOLDER
-_king_exe = os.path.join(_king_dir, 'king_integrator')
+_king_exe = os.path.join(_king_dir, "king_integrator")
 
 
-def king_integrator(w0: float | int | str, output: str | list[str] = 'profile') -> str | list[str]:
+def king_integrator(
+    w0: float | int | str, output: str | list[str] = "profile"
+) -> str | list[str]:
     r"""
-    This function calls a Fortran90 code for the Single-Mass King model 
+    This function calls a Fortran90 code for the Single-Mass King model
     integration routine.
 
     Taking as imput a value for the King $W_0$ parameter, it will perform the
@@ -62,26 +66,27 @@ def king_integrator(w0: float | int | str, output: str | list[str] = 'profile') 
     """
     if isinstance(w0, (float, int)):
         w0 = str(w0)
-    result = subprocess.run([_king_exe, w0], capture_output=True, text=True,
-                            cwd=_king_dir, check=False)
+    result = subprocess.run(
+        [_king_exe, w0], capture_output=True, text=True, cwd=_king_dir, check=False
+    )
     if result.returncode != 0:
         print("Error during trhe Fortran90 code execution:")
         print(result.stderr)
     else:
         print("Calling Fortran90 code executor...\n")
         print(result.stdout)
-    filelist = get_file_list(fold=_king_dir, key='.dat')
+    filelist = get_file_list(fold=_king_dir, key=".dat")
     result = []
-    if 'all' in output:
+    if "all" in output:
         result = filelist
     elif isinstance(output, list):
         for entry in output:
-            for i,file in enumerate(filelist):
+            for i, file in enumerate(filelist):
                 if entry in filelist:
                     result.append(file)
                     filelist.pop(i)
     else:
-        for i,file in enumerate(filelist):
+        for i, file in enumerate(filelist):
             if output in file:
                 result = file
                 filelist.pop(i)

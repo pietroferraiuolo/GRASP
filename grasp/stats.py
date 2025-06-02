@@ -21,10 +21,7 @@ from grasp import types as _T
 from astropy.table import Table as _Table
 from astroML.density_estimation import XDGMM
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
-from grasp.analyzers._Rcode import (
-    check_packages as _checkRpackages, 
-    r2py_models as _rm
-)
+from grasp.analyzers._Rcode import check_packages as _checkRpackages, r2py_models as _rm
 from scipy.optimize import curve_fit as _curve_fit
 import rpy2.robjects as _ro
 from rpy2.robjects import (
@@ -74,13 +71,17 @@ def XD_estimator(
     if correlations is not None:
         covariance_matrix = _construct_covariance_matrices(errors, correlations)
     else:
-        covariance_matrix = _np.array([_np.diag(e**2) for e in errors]) # (n_samples, n_features, n_features)
+        covariance_matrix = _np.array(
+            [_np.diag(e**2) for e in errors]
+        )  # (n_samples, n_features, n_features)
     model = XDGMM(random_state=_seed(), *xdargs)
     model.fit(x_data, covariance_matrix)
     return model
 
 
-def kfold_gmm_estimator(data: _T.ArrayLike, folds:int, **gmm_params: dict[str,_T.Any]) -> _T.GMModel:
+def kfold_gmm_estimator(
+    data: _T.ArrayLike, folds: int, **gmm_params: dict[str, _T.Any]
+) -> _T.GMModel:
     """
     K-Fold Gaussian Mixture Model Estimation function.
 
@@ -250,7 +251,7 @@ def fit(
 
 def fit_distribution(
     data: _T.Array,
-    bins: str|int|_T.Array = "detailed",
+    bins: str | int | _T.Array = "detailed",
     method: str = "gaussian",
     verbose: bool = True,
     plot: bool = False,
@@ -310,12 +311,13 @@ def fit_distribution(
         if isinstance(bins, str) and bins == "knuth":
             # print("knuth?") # DEBUG
             from astropy.stats import knuth_bin_width
-            _,bins = knuth_bin_width(data, return_bins=True)
+
+            _, bins = knuth_bin_width(data, return_bins=True)
             bins = _np2r.numpy2rpy(bins)
         elif isinstance(bins, int):
             # print("int?") # DEBUG
             bins = _ro.IntVector([bins])
-        elif isinstance(bins, (list,_np.ndarray)):
+        elif isinstance(bins, (list, _np.ndarray)):
             # print("array?") # DEBUG
             bins = _np2r.numpy2rpy(bins)
         r_data = _np2r.numpy2rpy(data)
@@ -324,6 +326,7 @@ def fit_distribution(
     _np2r.deactivate()
     if plot:
         from grasp.plots import regressionPlot
+
         regressionPlot(model)
     return model
 
@@ -464,25 +467,24 @@ def fit_data_points(
     return model
 
 
-
 def bootstrap_statistic(
     data: _T.Array,
-    statistic_function: _T.Callable[...,_T.Any],
+    statistic_function: _T.Callable[..., _T.Any],
     n_bootstrap: int = 1000,
     confidence_level: float = 0.68,
-    method: str = 'percentile',
+    method: str = "percentile",
     parallel: bool = False,
     n_jobs: _T.Optional[int] = None,
     show_progress: bool = True,
     return_bootstrap_distribution: bool = False,
     random_seed: _T.Optional[int] = None,
     *args: _T.Any,
-    **kwargs: _T.Any
+    **kwargs: _T.Any,
 ) -> tuple[float, float, _T.Optional[_T.Array]]:
     """
     Calculate any statistic with uncertainty using bootstrap resampling,
     optimized for astrophysical data analysis.
-    
+
     Parameters
     ----------
     data : np.ndarray
@@ -513,12 +515,12 @@ def bootstrap_statistic(
         Random seed for reproducibility. Default is None.
     *args, **kwargs
         Additional arguments passed to statistic_function.
-        
+
     Returns
     -------
     (statistic_value, uncertainty, bootstrap_distribution) : if return_bootstrap_distribution=True
     (statistic_value, uncertainty) : otherwise
-        
+
     Examples
     --------
     ```python
@@ -530,7 +532,7 @@ def bootstrap_statistic(
     # Calculate mean and its asymmetric uncertainty (for skewed distributions)
     from astropy.stats import sigma_clip
     mean, uncertainty, dist = bootstrap_statistic(
-        data, sigma_clip, method='percentile', confidence_level=0.95, 
+        data, sigma_clip, method='percentile', confidence_level=0.95,
         return_bootstrap_distribution=True)
     lower, upper = np.percentile(dist, [2.5, 97.5])  # 95% confidence interval
     print(f"Mean: {mean:.1f} +{upper-mean:.1f} -{mean-lower:.1f}")
@@ -538,86 +540,99 @@ def bootstrap_statistic(
     """
     from tqdm import tqdm as _tqdm
     from multiprocessing import Pool as _Pool, cpu_count as _ncpu
-    
+
     # Input validation
     data = _np.asarray(data)
     if data.size == 0:
         raise ValueError("Input data array is empty")
-    
+
     if n_bootstrap <= 0:
         raise ValueError("Number of bootstrap iterations must be positive")
-    
+
     if not (0 < confidence_level < 1):
         raise ValueError("Confidence level must be between 0 and 1")
-    
-    if method not in ['percentile', 'std']:
+
+    if method not in ["percentile", "std"]:
         raise ValueError("Method must be either 'percentile' or 'std'")
-    
+
     # Set random seed for reproducibility if specified
     if random_seed is not None:
         _np.random.seed(random_seed)
-    
+
     # Try to compute the statistic on the original data to check if it works
     try:
         original_statistic = statistic_function(data, *args, **kwargs)
     except Exception as e:
         raise ValueError(f"Failed to compute statistic on input data: {str(e)}")
-    
+
     # Determine array shape and setup bootstrap samples
     n_samples = data.shape[0]
     bootstrap_statistics = _np.zeros((n_bootstrap,) + _np.shape(original_statistic))
-    
+
     # Generate bootstrap indices in advance
-    all_indices = [_np.random.choice(n_samples, size=n_samples, replace=True) 
-                  for _ in range(n_bootstrap)]
-    
+    all_indices = [
+        _np.random.choice(n_samples, size=n_samples, replace=True)
+        for _ in range(n_bootstrap)
+    ]
+
     # Run bootstrap iterations
     if parallel and n_bootstrap > 50:  # Only use parallel for larger bootstrap sizes
         n_proc = n_jobs if n_jobs is not None else _ncpu()
-        
+
         # Prepare arguments for parallel execution
-        all_args = [(data, indices, statistic_function, args, kwargs) 
-                   for indices in all_indices]
-        
+        all_args = [
+            (data, indices, statistic_function, args, kwargs) for indices in all_indices
+        ]
+
         with _Pool(processes=n_proc) as pool:
             iter_func = pool.imap(_bootstrap_helper, all_args)
             if show_progress:
                 iter_func = _tqdm(iter_func, total=n_bootstrap, desc="Bootstrap")
-            
+
             bootstrap_statistics = _np.array(list(iter_func))
     else:
-        iter_range = _tqdm(range(n_bootstrap), desc="Bootstrap") if show_progress else range(n_bootstrap)
+        iter_range = (
+            _tqdm(range(n_bootstrap), desc="Bootstrap")
+            if show_progress
+            else range(n_bootstrap)
+        )
         for i in iter_range:
             # Directly call the helper function with the prepared arguments
             bootstrap_statistics[i] = _bootstrap_helper(
                 (data, all_indices[i], statistic_function, args, kwargs)
             )
-    
+
     # Check for NaNs from failed computations
     nan_mask = _np.isnan(bootstrap_statistics)
     if _np.isscalar(original_statistic):
         nan_count = _np.sum(nan_mask)
     else:
-        nan_count = _np.sum(nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim))))
-    
+        nan_count = _np.sum(
+            nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim)))
+        )
+
     if nan_count > 0:
         print(f"Warning: {nan_count} bootstrap iterations failed and were excluded")
         if _np.isscalar(original_statistic):
             bootstrap_statistics = bootstrap_statistics[~nan_mask]
         else:
-            bootstrap_statistics = bootstrap_statistics[~nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim)))]
-        
+            bootstrap_statistics = bootstrap_statistics[
+                ~nan_mask.any(axis=tuple(range(1, bootstrap_statistics.ndim)))
+            ]
+
     if len(bootstrap_statistics) == 0:
         raise RuntimeError("All bootstrap iterations failed")
-    
+
     # Calculate uncertainty
-    if method == 'percentile':
+    if method == "percentile":
         alpha = (1 - confidence_level) / 2
         lower_percentile = alpha * 100
         upper_percentile = (1 - alpha) * 100
-        
+
         if _np.isscalar(original_statistic):
-            lower, upper = _np.percentile(bootstrap_statistics, [lower_percentile, upper_percentile])
+            lower, upper = _np.percentile(
+                bootstrap_statistics, [lower_percentile, upper_percentile]
+            )
             uncertainty = (upper - lower) / 2  # Average of the two-sided interval
         else:
             # Handle multidimensional statistics
@@ -625,15 +640,16 @@ def bootstrap_statistic(
             for idx in _np.ndindex(original_statistic.shape):
                 idx_tuple = idx if len(idx) > 0 else 0
                 stat_at_idx = bootstrap_statistics[(slice(None),) + idx]
-                lower, upper = _np.percentile(stat_at_idx, [lower_percentile, upper_percentile])
+                lower, upper = _np.percentile(
+                    stat_at_idx, [lower_percentile, upper_percentile]
+                )
                 uncertainty[idx] = (upper - lower) / 2
     else:  # 'std' method
         uncertainty = _np.std(bootstrap_statistics, axis=0, ddof=1)
-    
+
     if return_bootstrap_distribution:
         return original_statistic, uncertainty, bootstrap_statistics
     return original_statistic, uncertainty
-
 
 
 # Define this helper function at module level so it can be pickled
@@ -646,7 +662,7 @@ def _bootstrap_helper(args):
             bootstrap_sample = data[indices]
         else:
             bootstrap_sample = data[indices, :]
-        
+
         # Compute the statistic
         return statistic_function(bootstrap_sample, *func_args, **func_kwargs)
     except Exception:
@@ -655,8 +671,7 @@ def _bootstrap_helper(args):
         return _np.nan * _np.ones(shape) if shape else _np.nan
 
 
-
-def _get_function(name: str): # -> _T.FittingFunc[..., float]:
+def _get_function(name: str):  # -> _T.FittingFunc[..., float]:
     """
     This function returns the function corresponding to the provided name.
     The function must be defined in the `grasp.stats` module.

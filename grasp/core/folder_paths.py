@@ -11,20 +11,20 @@ import os as _os
 
 BASE_PATH = _os.path.dirname(_os.path.dirname(__file__))
 try:
-    BASE_DATA_PATH      = _os.path.join(_os.environ['GRASPDATA'])
+    BASE_DATA_PATH = _os.path.join(_os.environ["GRASPDATA"])
 except KeyError:
     print("No GRASPDATA environment variable found. Using the HOME folder.")
-    BASE_DATA_PATH      = _os.path.join(_os.path.expanduser('~'), 'graspdata')
-SYS_DATA_FOLDER         = _os.path.join(BASE_PATH, "sysdata")
-CATALOG_FILE            = _os.path.join(BASE_PATH, 'sysdata', "_Catalogue.xlsx")
-KING_INTEGRATOR_FOLDER  = _os.path.join(BASE_PATH, "analyzers", "_king")
-MCLUSTER_SOURCE_CODE    = _os.path.join(BASE_PATH, "analyzers", "_mcluster")
-R_SOURCE_FOLDER         = _os.path.join(BASE_PATH, "analyzers", "_Rcode")
-FORMULARY_BASE_FILE     = _os.path.join(SYS_DATA_FOLDER, "base.frm")
-QUERY_DATA_FOLDER       = _os.path.join(BASE_DATA_PATH, "query")
-KING_MODELS_FOLDER      = _os.path.join(BASE_DATA_PATH, "models")
-SIMULATION_FOLDER       = _os.path.join(BASE_DATA_PATH, "simulations")
-UNTRACKED_DATA_FOLDER   = _os.path.join(QUERY_DATA_FOLDER, "UntrackedData")
+    BASE_DATA_PATH = _os.path.join(_os.path.expanduser("~"), "graspdata")
+SYS_DATA_FOLDER = _os.path.join(BASE_PATH, "sysdata")
+CATALOG_FILE = _os.path.join(BASE_PATH, "sysdata", "_Catalogue.xlsx")
+KING_INTEGRATOR_FOLDER = _os.path.join(BASE_PATH, "analyzers", "_king")
+MCLUSTER_SOURCE_CODE = _os.path.join(BASE_PATH, "analyzers", "_mcluster")
+R_SOURCE_FOLDER = _os.path.join(BASE_PATH, "analyzers", "_Rcode")
+FORMULARY_BASE_FILE = _os.path.join(SYS_DATA_FOLDER, "base.frm")
+QUERY_DATA_FOLDER = _os.path.join(BASE_DATA_PATH, "query")
+KING_MODELS_FOLDER = _os.path.join(BASE_DATA_PATH, "models")
+SIMULATION_FOLDER = _os.path.join(BASE_DATA_PATH, "simulations")
+UNTRACKED_DATA_FOLDER = _os.path.join(QUERY_DATA_FOLDER, "UntrackedData")
 
 paths = [
     BASE_DATA_PATH,

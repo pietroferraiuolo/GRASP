@@ -7,7 +7,7 @@ from typing import (
     Optional,
     Protocol,
     TypeAlias,
-    runtime_checkable
+    runtime_checkable,
 )
 from numpy.typing import ArrayLike
 from pandas import DataFrame, Series
@@ -21,20 +21,17 @@ if TYPE_CHECKING:
         GaussianMixtureModel,
         PyRegressionModel,
         RegressionModel,
-        KFoldGMM
+        KFoldGMM,
     )
 
 
-AstroTable: TypeAlias = Union[
-    DataFrame,
-    Table,
-    QTable
-]
+AstroTable: TypeAlias = Union[DataFrame, Table, QTable]
 
 GcInstance: TypeAlias = Union[
     str,
     "Cluster",
 ]
+
 
 @runtime_checkable
 class _SampleProtocol(Protocol):
@@ -44,6 +41,7 @@ class _SampleProtocol(Protocol):
     def gc(self) -> Optional["Cluster"]: ...
     def join(self, other: "Sample", keep: str, inplace: bool) -> "Sample": ...
     def dropna(self, inplace: bool = False) -> "Sample": ...
+
 
 TabularData = TypeVar("TabularData", bound=_SampleProtocol)
 
@@ -59,29 +57,17 @@ class _ModelProtocol(Protocol):
 
 FittingFunc: TypeAlias = Union[str, Callable[..., float]]
 
-RegressionModels: TypeAlias = Union[
-    "RegressionModel",
-    "PyRegressionModel"
-]
+RegressionModels: TypeAlias = Union["RegressionModel", "PyRegressionModel"]
 
-GMModel: TypeAlias = Union["GaussianMixtureModel","KFoldGMM"]
+GMModel: TypeAlias = Union["GaussianMixtureModel", "KFoldGMM"]
 
 Model = TypeVar("Model", bound=_ModelProtocol)
 
 Array: TypeAlias = Union[
-    ArrayLike,
-    list[int],
-    list[float],
-    list[complex],
-    list[int,float,complex]
+    ArrayLike, list[int], list[float], list[complex], list[int, float, complex]
 ]
 
-AnalyticalFunc : TypeAlias = Union[
-    _sp.Basic,
-    _sp.Add,
-    _sp.Mul,
-    _sp.Pow,
-    _sp.Function,
-    _sp.Equality
+AnalyticalFunc: TypeAlias = Union[
+    _sp.Basic, _sp.Add, _sp.Mul, _sp.Pow, _sp.Function, _sp.Equality
 ]
-Variables: TypeAlias = Union[_sp.Symbol,_sp.NumberSymbol]
+Variables: TypeAlias = Union[_sp.Symbol, _sp.NumberSymbol]

@@ -1,5 +1,15 @@
-from __future__ import annotations
-""""""
+"""
+Author(s):
+----------
+- Pietro Ferraiuolo : 2024
+
+Description:
+------------
+This module provides a function to run the mcluster code, which is used to generate
+star clusters with specified parameters. It allows for the creation of clusters
+with various density profiles, mass distributions, and other characteristics.
+
+"""
 
 import os as _os
 import shutil as _sh
@@ -18,7 +28,7 @@ _mcluster = _os.path.join(_MCSC, "mcluster")
 _mcluster_sse = _os.path.join(_MCSC, "mcluster_sse")
 
 
-def mcluster_run(SSE: bool = False, **arguments: dict[str, int|float]) -> _QTable:
+def mcluster_run(SSE: bool = False, **arguments: dict[str, int | float]) -> _QTable:
     """
     Run mcluster with the specified arguments.
 
@@ -146,7 +156,8 @@ def docs(detailed: bool = False) -> str:
             print(line, end="")
         process.wait()
     else:
-        print("""
+        print(
+            """
 **************************************************************
 McLuster - a tool to make a star cluster
 
@@ -466,5 +477,6 @@ plane.
 
 When you generate a table of stars you may be interested in 
 astrophysical units rather than Nbody units.
-        """)
+        """
+        )
     return None

@@ -68,8 +68,8 @@ class Sample(_QTable):
                     self.gc.ra = self["ra"].mean() * deg
                     self.gc.dec = self["dec"].mean() * deg
                 else:
-                    self.gc.ra = 0.
-                    self.gc.dec = 0.
+                    self.gc.ra = 0.0
+                    self.gc.dec = 0.0
             else:
                 self.gc = _Cluster(gc)
         else:
@@ -107,7 +107,6 @@ class Sample(_QTable):
         """The reversed iterator"""
         return reversed(self.colnames)
 
-
     def drop_columns(self, columns: list[str]):
         """
         Drops the specified columns from the sample data.
@@ -119,16 +118,13 @@ class Sample(_QTable):
         """
         self.remove_columns(columns)
 
-
     def head(self, n: int = 5):
         """Returns the first n rows of the sample"""
         return self.to_pandas().head(n)
 
-
     def describe(self):
         """Returns the description of the sample"""
         return self.to_pandas().describe()
-
 
     def join(
         self, other: _gt.TabularData, keep: str = "both", inplace: bool = False
@@ -178,7 +174,7 @@ class Sample(_QTable):
             new_sample.drop_columns(["_merge"])
             return new_sample
 
-    def dropna(self, inplace: bool = True) -> None|_gt.TabularData:
+    def dropna(self, inplace: bool = True) -> None | _gt.TabularData:
         """
         Drops rows with NaN values from the sample data.
 
@@ -186,7 +182,7 @@ class Sample(_QTable):
         ----------
         inplace : bool
             If True, the operation is done in place, otherwise a new object is returned.
-        
+
         Returns
         -------
         sample : grasp.Sample or None
@@ -203,7 +199,6 @@ class Sample(_QTable):
             df = (self.copy()).to_pandas()
             df.dropna(inplace=True)
             return Sample(_QTable.from_pandas(df), self.gc)
-
 
     def to_pandas(self, *args, **kwargs) -> _gt.TabularData:
         """
@@ -223,7 +218,6 @@ class Sample(_QTable):
         """
         return super().to_pandas(*args, **kwargs)
 
-
     def to_numpy(self, columns: list[str] = None) -> _gt.Array:
         """
         Converts the sample data to a numpy array.
@@ -237,7 +231,6 @@ class Sample(_QTable):
             return self[columns].to_pandas().to_numpy()
         else:
             return self.to_pandas().to_numpy()
-
 
     def reset_sample(self) -> None:
         """
@@ -253,7 +246,6 @@ class Sample(_QTable):
         # Add columns from the backup QTable
         for col in self._bckupSample.itercols():
             self.add_column(col.copy())
-
 
     def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> None:
         """
@@ -281,7 +273,6 @@ class Sample(_QTable):
                 )
         print(self.gc.__str__())
         return
-
 
     def apply_conditions(
         self, conditions: str | list[str] | dict[str, str], inplace: bool = False
@@ -338,7 +329,10 @@ class Sample(_QTable):
         filtered_sample: _gt.DataFrame = sample[mask]
         if inplace:
             # Store units before removing columns
-            col_units = {col: self[col].unit if hasattr(self[col], "unit") else None for col in self.colnames}
+            col_units = {
+                col: self[col].unit if hasattr(self[col], "unit") else None
+                for col in self.colnames
+            }
             # Remove all columns
             for col in list(self.colnames):
                 self.remove_column(col)
@@ -354,7 +348,6 @@ class Sample(_QTable):
             return
         else:
             return Sample(filtered_sample, self.gc)
-
 
     def __check_simulation(self) -> bool:
         """Check wether the data the sample has been instanced with is
@@ -382,7 +375,6 @@ class Sample(_QTable):
         else:
             is_simulation = False
         return is_simulation
-
 
     def __get_repr(self) -> str:
         """Gets the str representation"""
@@ -413,7 +405,6 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
         tabula: str = tabulate(righe, headers=headers, tablefmt="presto")
         stxt += tabula.replace("|", " ").replace("+", "-")
         return gctxt + stxt
-
 
     def __create_backup_table(self) -> _gt.AstroTable:
         """

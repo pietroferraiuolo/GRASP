@@ -8,6 +8,7 @@ Description
 This module contains R libraries implementation checks
 for the GRASP package.
 """
+
 from typing import Union
 from logging import ERROR
 from rpy2.robjects.packages import importr, isinstalled, LibraryError
@@ -16,11 +17,11 @@ from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
 # Disable unnecessary R logging
 rpy2_logger.setLevel(ERROR)
 
-utils = importr('utils')
+utils = importr("utils")
 utils.chooseCRANmirror(ind=1)
 
 
-def check_packages(packages:Union[str, list[str]]) -> None:
+def check_packages(packages: Union[str, list[str]]) -> None:
     """
     Check if the R packages are installed.
 
@@ -44,6 +45,6 @@ def check_packages(packages:Union[str, list[str]]) -> None:
             importr(package)
         except LibraryError as e:
             raise LibraryError(
-                f"Package `{package}` installed but failed to import") from e
+                f"Package `{package}` installed but failed to import"
+            ) from e
         print(f"Correctly imported `{package}`.")
-            

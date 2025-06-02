@@ -16,7 +16,7 @@ import rpy2.robjects as _ro
 from rpy2.robjects import (
     pandas2ri as _pd2r,
     numpy2ri as _np2r,
-    #rinterface as _ri,
+    # rinterface as _ri,
     globalenv as _genv,
     r as _R,
 )
@@ -24,24 +24,25 @@ from rpy2.robjects import (
 
 class GaussianMixtureModel:
     """
-    Class to convert the R Mclust Gaussian Mixture Model into a Python 
+    Class to convert the R Mclust Gaussian Mixture Model into a Python
     dictionary.
     """
 
-    def __init__(self, r_model, predictions = None):
+    def __init__(self, r_model, predictions=None):
         """The Constructor"""
-        self.rmodel         = r_model
-        self.model          = _listvector_to_dict(r_model)
-        self.classification = _listvector_to_dict(predictions) if predictions is not None else None
-        self._predicted     = False if predictions is None else True
+        self.rmodel = r_model
+        self.model = _listvector_to_dict(r_model)
+        self.classification = (
+            _listvector_to_dict(predictions) if predictions is not None else None
+        )
+        self._predicted = False if predictions is None else True
         self._manage_parameters()
 
     def __repr__(self):
         return "GaussianMixtureModel()"
-    
+
     def __str__(self):
-        str_ = \
-f"""----------------------------------------------------
+        str_ = f"""----------------------------------------------------
 Python wrapper for R Mclust's Gaussian Mixture Model
             fitted by EM algorithm
 ----------------------------------------------------
@@ -66,8 +67,7 @@ Predicted : {self._predicted}
         """
         The data used to fit the model.
         """
-        return _np.reshape(self.model['data'], (self.ndG[1], self.ndG[0])).T
- 
+        return _np.reshape(self.model["data"], (self.ndG[1], self.ndG[0])).T
 
     @property
     def bic(self):
@@ -100,7 +100,7 @@ Predicted : {self._predicted}
         - z : the membership probability of each data point to each component
         - classification : the classification of the data points
         """
-        return {'z': self.model["z"], 'classification': self.model["classification"]}
+        return {"z": self.model["z"], "classification": self.model["classification"]}
 
     @property
     def parameters(self):
@@ -127,14 +127,14 @@ Predicted : {self._predicted}
         """
         The coefficients of the model.
         """
-        return self.model['parameters']["mean"]
+        return self.model["parameters"]["mean"]
 
     @property
     def covmats(self):
         """
         The covariance matrices of the model.
         """
-        return self.model['parameters']["variance"]["covMats"]
+        return self.model["parameters"]["variance"]["covMats"]
 
     def predict(self, data):
         """
@@ -144,7 +144,7 @@ Predicted : {self._predicted}
         ----------
         data : array-like, shape (n_samples, n_features)
             The data to predict the membership probability for.
-        
+
         Returns
         -------
         array-like, shape (n_samples, n_components)
@@ -153,72 +153,78 @@ Predicted : {self._predicted}
         import os
         from .r_check import check_packages
         from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
+
         check_packages("mclust")
         _np2r.activate()
         code = os.path.join(_RSF, "gaussian_mixture.R")
         _R(f'source("{code}")')
         rdata = _np2r.py2rpy(data)
-        result = _genv['GMMPredict'](self.rmodel, rdata)
+        result = _genv["GMMPredict"](self.rmodel, rdata)
         self.classification = _listvector_to_dict(result)
         self._predicted = True
         return self.classification
-    
+
     def save_model(self, filename):
         """
         Save the R model to a `.rds` file, so it can be loaded both into R, with
-        `model <- readRDS(filename)`, and in python, with 
-        
+        `model <- readRDS(filename)`, and in python, with
+
         ```python
         model = grasp.GaussianMixtureModel()
         model.load_model(filename)
         ```
-        
+
         Parameters
         ----------
         filename : str
             The name of the file to save the model to. The extention can be
             omitted, as it will be attached to then filename
         """
-        if '.rds' not in filename:
-            filename += '.rds'
-        _ro.r('saveRDS')(self.rmodel, file=filename)
+        if ".rds" not in filename:
+            filename += ".rds"
+        _ro.r("saveRDS")(self.rmodel, file=filename)
         print(f"Model saved to {filename}")
-
 
     @classmethod
     def load_model(cls, filename):
         """
         Load the model from a `.rds` file, so it can be used in Python.
-        
+
         Parameters
         ----------
         filename : str
             The name of the file to load the model from. The extention can be
             omitted, as it will be attached to then filename
         """
-        if '.rds' not in filename:
-            filename += '.rds'
-        rmodel = _ro.r('readRDS')(filename)
+        if ".rds" not in filename:
+            filename += ".rds"
+        rmodel = _ro.r("readRDS")(filename)
         return cls(r_model=rmodel)
-
 
     def _manage_parameters(self):
         covmats = _np.array(self.model["parameters"]["variance"]["sigma"])
-        params  = _np.array(self.model["parameters"]["mean"])
-        if not (covmats.shape == (self.ndG[2], self.ndG[1], self.ndG[1]) and params.shape == (self.ndG[2], self.ndG[1])):
-            self.model["parameters"]["variance"]["covMats"] = _np.reshape(covmats, (self.ndG[2], self.ndG[1], self.ndG[1]))
-            self.model["parameters"]["mean"] = _np.reshape(params, (self.ndG[2], self.ndG[1]))
-        keys_to_remove = ["modelName", "d", "G", "sigma", "scale", 'shape']
+        params = _np.array(self.model["parameters"]["mean"])
+        if not (
+            covmats.shape == (self.ndG[2], self.ndG[1], self.ndG[1])
+            and params.shape == (self.ndG[2], self.ndG[1])
+        ):
+            self.model["parameters"]["variance"]["covMats"] = _np.reshape(
+                covmats, (self.ndG[2], self.ndG[1], self.ndG[1])
+            )
+            self.model["parameters"]["mean"] = _np.reshape(
+                params, (self.ndG[2], self.ndG[1])
+            )
+        keys_to_remove = ["modelName", "d", "G", "sigma", "scale", "shape"]
         for key in keys_to_remove:
-            self.model["parameters"]['variance'].pop(key, None)
+            self.model["parameters"]["variance"].pop(key, None)
         return
-
 
 
 class KFoldGMM:
     """
     Python wrapper for the result of K-fold cross-validation of a Gaussian Mixture Model (Mclust) in R.
     """
+
     def __init__(self, rmodel: object):
         """
         Parameters
@@ -248,14 +254,14 @@ class KFoldGMM:
         """
         The mean log-likelihood across all folds.
         """
-        return float(self.model.get("mean_loglik", float('nan')))
+        return float(self.model.get("mean_loglik", float("nan")))
 
     @property
     def mean_bic(self) -> float:
         """
         The mean BIC across all folds.
         """
-        return float(self.model.get("mean_bic", float('nan')))
+        return float(self.model.get("mean_bic", float("nan")))
 
     @property
     def logliks(self) -> list:
@@ -287,8 +293,7 @@ class KFoldGMM:
         # If r_models is a single model, wrap in list
         model_list = [GaussianMixtureModel(r_model) for r_model in r_models]
         return model_list
-    
-    
+
     def best_model(self) -> GaussianMixtureModel:
         """
         Returns the best model based on BIC.
@@ -297,28 +302,25 @@ class KFoldGMM:
         return self.models[best_index]
 
 
-
 class RegressionModel:
     """
     Class to convert the R LM Regression Model into a Python dictionary.
     """
 
-    def __init__(self, r_model= None, kind:str=''):
+    def __init__(self, r_model=None, kind: str = ""):
         """The Constructor"""
         if not r_model is None:
             self.rmodel = r_model
-            self.model  = _listvector_to_dict(r_model)
-            self._model_kind = kind if kind!='' else self.model['kind']
+            self.model = _listvector_to_dict(r_model)
+            self._model_kind = kind if kind != "" else self.model["kind"]
         else:
             self.rmodel = None
             self.model = None
             self._model_kind = kind
 
-
     def __repr__(self):
         """The representation of the model."""
         return f"RegressionModel('{self._model_kind.capitalize()}')"
-    
 
     def __str__(self):
         """The string representation of the model."""
@@ -326,9 +328,8 @@ class RegressionModel:
             return ""
         txt = _kde_labels(self._model_kind, self.coeffs).splitlines()
         txt.pop(0)
-        txt = ('\n'.join(txt)).replace('$', '')
-        str_ = \
-f"""----------------------------------------------------
+        txt = ("\n".join(txt)).replace("$", "")
+        str_ = f"""----------------------------------------------------
 Python wrapper for R Levenberg-Marquardt Nonlinear 
               Least-Squares Algorithm            
 ----------------------------------------------------
@@ -340,45 +341,43 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
 {txt}
 """
         return str_
-    
+
     def save_model(self, filename):
         """
         Save the R model to a `.rds` file, so it can be loaded both into R, with
-        `model <- readRDS(filename)`, and in python, with 
-        
+        `model <- readRDS(filename)`, and in python, with
+
         ```python
         model = grasp.RegressionModel()
         model.load_model(filename)
         ```
-        
+
         Parameters
         ----------
         filename : str
             The name of the file to save the model to. The extention can be
             omitted, as it will be attached to then filename
         """
-        if '.rds' not in filename:
-            filename += '.rds'
-        _ro.r('saveRDS')(self.rmodel, file=filename)
+        if ".rds" not in filename:
+            filename += ".rds"
+        _ro.r("saveRDS")(self.rmodel, file=filename)
         print(f"Model saved to {filename}")
-
 
     @classmethod
     def load_model(cls, filename):
         """
         Load the model from a `.rds` file, so it can be used in Python.
-        
+
         Parameters
         ----------
         filename : str
             The name of the file to load the model from. The extention can be
             omitted, as it will be attached to then filename
         """
-        if '.rds' not in filename:
-            filename += '.rds'
-        rmodel = _ro.r('readRDS')(filename)
+        if ".rds" not in filename:
+            filename += ".rds"
+        rmodel = _ro.r("readRDS")(filename)
         return cls(r_model=rmodel)
-
 
     @property
     def coeffs(self):
@@ -386,14 +385,14 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
         The coefficients of the regression model.
         """
         return self.model["coeffs"]
-    
+
     @property
     def data(self):
         """
         The data used to fit the model.
         """
         return self.model["data"]
-    
+
     @property
     def x(self):
         """
@@ -407,7 +406,7 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
         The dependent variables of the model.
         """
         return self.model["y"]
-    
+
     @property
     def residuals(self):
         """
@@ -427,15 +426,16 @@ class PyRegressionModel:
     """
     Native Python regression model class for the GRASP package.
     """
+
     def __init__(self, fit, kind):
         """The Constructor"""
-        if kind == 'linear':
+        if kind == "linear":
             self.data = {
                 "x": fit["x"],
                 "y": fit["data"],
             }
         else:
-            self.data = fit['data']
+            self.data = fit["data"]
         self.x = fit["x"]
         self.y = fit["y_fit"]
         self.residuals = fit["residuals"]
@@ -446,20 +446,26 @@ class PyRegressionModel:
     def __repr__(self):
         """The representation of the model."""
         return f"RegressionModel('{self.kind.capitalize()}')"
-    
+
     def __str__(self):
-        """The string representation of the model.""" 
+        """The string representation of the model."""
         base_txt = f"""{self.kind.upper()} Regression Model
 --------------------------------------
 Coefficients:
 """
-        coeff_txt = "\n".join([f"{chr(65 + i)} = {_format_number(param)}" for i, param in enumerate(self.coeffs)])
+        coeff_txt = "\n".join(
+            [
+                f"{chr(65 + i)} = {_format_number(param)}"
+                for i, param in enumerate(self.coeffs)
+            ]
+        )
         return base_txt + coeff_txt
 
 
 # =============================================================================
 # Support scripts for other functionalities related to R2Py Models
 # =============================================================================
+
 
 def _listvector_to_dict(r_listvector):
     """
@@ -507,91 +513,94 @@ def _kde_labels(kind: str, coeffs):
     """
     Return the labels for the KDE plot.
     """
-    
-    if kind == 'gaussian':
+
+    if kind == "gaussian":
         A, mu, sigma2 = coeffs
         label = f"""Gaussian
 $A$   = {_format_number(A)}
 $\\mu$   = {_format_number(mu)}
 $\\sigma^2$  = {_format_number(sigma2)}"""
-        
-    elif kind == 'boltzmann':
+
+    elif kind == "boltzmann":
         A1, A2, x0, dx = coeffs
         label = f"""Boltzmann
 $A1$   = {_format_number(A1)}
 $A2$   = {_format_number(A2)}
 $x_0$   = {_format_number(x0)}
 $dx$   = {_format_number(dx)}"""
-        
-    elif kind == 'exponential':
+
+    elif kind == "exponential":
         A, lmbda = coeffs
         label = f"""Exponential
 $A$   = {_format_number(A)}
 $\\lambda$ = {_format_number(lmbda)}"""
-        
-    elif kind == 'king':
+
+    elif kind == "king":
         A, ve, sigma = coeffs
         label = f"""King
 $A$   = {_format_number(A)}
 $v_e$   = {_format_number(ve)}
 $\\sigma$  = {_format_number(sigma)}"""
-        
-    elif kind == 'maxwell':
+
+    elif kind == "maxwell":
         A, sigma = coeffs
         label = f"""Maxwell
 $A$   = {_format_number(A)}
 $\\sigma$  = {_format_number(sigma)}"""
-        
-    elif kind == 'rayleigh':
+
+    elif kind == "rayleigh":
         A, sigma = coeffs
         label = f"""Rayleigh
 $A$   = {_format_number(A)}
 $\\sigma$  = {_format_number(sigma)}"""
-        
-    elif kind == 'lorentzian':
+
+    elif kind == "lorentzian":
         A, x0, gamma = coeffs
         label = f"""Lorentzian
 $A$   = {_format_number(A)}
 $x_0$   = {_format_number(x0)}
 $\\gamma$  = {_format_number(gamma)}"""
-    
-    elif kind == 'power':
+
+    elif kind == "power":
         A, n = coeffs
         label = f"""Power
 $A$   = {_format_number(A)}
 $n$   = {_format_number(n)}"""
-        
-    elif kind == 'lognormal':
+
+    elif kind == "lognormal":
         A, mu, sigma = coeffs
         label = f"""Lognormal
 $A$   = {_format_number(A)}
 $\mu$   = {_format_number(mu)}
 $\\sigma$  = {_format_number(sigma)}"""
-    
-    elif kind == 'poisson':
+
+    elif kind == "poisson":
         A, lmbda = coeffs
         label = f"""Poisson
 $A$   = {_format_number(A)}
 $\\lambda$ = {_format_number(lmbda)}"""
-        
-    elif kind == 'linear':
+
+    elif kind == "linear":
         A, B = coeffs
         label = f"""Linear
 $A$   = {_format_number(A)}
 $B$   = {_format_number(B)}"""
-    
-    elif 'polynomial' in kind:
+
+    elif "polynomial" in kind:
         degree = int(kind[0])
-        label = f"Polynomial of degree {degree}\n"+\
-        "\n".join(
-            [f"${chr(65 + i)}$   = {_format_number(param)}" for i, param in enumerate(coeffs)]
+        label = f"Polynomial of degree {degree}\n" + "\n".join(
+            [
+                f"${chr(65 + i)}$   = {_format_number(param)}"
+                for i, param in enumerate(coeffs)
+            ]
         )
 
-    elif kind == 'custom':
+    elif kind == "custom":
         label = "Custom\n" + "\n".join(
-            [f"${chr(65 + i)}$   = {_format_number(param)}" for i, param in enumerate(coeffs)]
+            [
+                f"${chr(65 + i)}$   = {_format_number(param)}"
+                for i, param in enumerate(coeffs)
+            ]
         )
-        
+
     return label
-
-

@@ -29,13 +29,13 @@ from grasp.analyzers._Rcode.r2py_models import (
     PyRegressionModel as _FakeRegModel,
 )
 
-label_font: dict[str,str|int] = {
+label_font: dict[str, str | int] = {
     "family": "serif",
     "color": "black",
     "weight": "normal",
     "size": 15,
 }
-title_font: dict[str,str|int] = {
+title_font: dict[str, str | int] = {
     "family": "serif",
     # "style": "italic",
     "color": "black",
@@ -43,7 +43,7 @@ title_font: dict[str,str|int] = {
     "size": 20,
 }
 
-default_figure_size: tuple[float,float] = (6.4, 5.2)
+default_figure_size: tuple[float, float] = (6.4, 5.2)
 
 
 def doubleHistScatter(
@@ -51,7 +51,8 @@ def doubleHistScatter(
     y: _T.Array,
     kde: bool = False,
     kde_kind: str = "gaussian",
-    **kwargs: dict[str,_T.Any],
+    show: bool = True,
+    **kwargs: dict[str, _T.Any],
 ):
     """
     Make a 2D scatter plot of two data arrays, with the respective histogram distributions
@@ -125,9 +126,11 @@ def doubleHistScatter(
     sc = kwargs.get("scatter_color", "black")
     s = _osu.get_kwargs(("size", "s"), 5, kwargs)
     fsize = kwargs.get("figsize", (5.6, 5.2))
+    grid = kwargs.get("grid", False)
     n_bins = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
+
         _, n_bins = knuth_bin_width(x, return_bins=True)
     elif n_bins == "detailed":
         n_bins = int(1.5 * _np.sqrt(len(x)))
@@ -186,7 +189,13 @@ def doubleHistScatter(
         )
         ax_histx.legend(loc="best", fontsize="small")
         ax_histy.legend(loc="best", fontsize="small")
-    _plt.show()
+    if grid:
+        ax.grid(True, linestyle="--", alpha=0.5)
+        ax_histx.grid(True, linestyle="--", alpha=0.5)
+        ax_histy.grid(True, linestyle="--", alpha=0.5)
+    if show:
+        _plt.show()
+    return fig, (ax, ax_histx, ax_histy)
 
 
 def colorMagnitude(
@@ -194,7 +203,7 @@ def colorMagnitude(
     g: _T.Optional[_T.Array] = None,
     b_r: _T.Optional[_T.Array] = None,
     teff_gspphot: _T.Optional[_T.Array] = None,
-    **kwargs: dict[str,_T.Any],
+    **kwargs: dict[str, _T.Any],
 ):
     """
     Make a scatter plot to create a color-magnitude diagram of the sample, using
@@ -252,7 +261,9 @@ def colorMagnitude(
     _plt.show()
 
 
-def properMotion(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
+def properMotion(
+    sample: _T.TabularData, show: bool = True, **kwargs: dict[str, _T.Any]
+):
     """
     Make a scatter plot in the proper motion space of the sample.
 
@@ -286,10 +297,12 @@ def properMotion(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     _plt.title("Proper Motion Distribution", fontdict=title_font)
     ax.axis("equal")
     _plt.scatter(pmra, pmdec, c=col, alpha=alpha, s=size)
-    _plt.show()
+    if show:
+        _plt.show()
+    return fig, ax
 
 
-def spatial(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
+def spatial(sample: _T.TabularData, show: bool = True, **kwargs: dict[str, _T.Any]):
     """
     Make a scatter plot in the spatial plot, that is in the Ra-Dec plane.
 
@@ -340,7 +353,9 @@ def spatial(sample: _T.TabularData, **kwargs: dict[str,_T.Any]):
     _plt.scatter(ra, dec, c=col, alpha=alpha, s=size, cmap=cmap)
     if colorbar:
         _plt.colorbar(label=clabel)
-    _plt.show()
+    if show:
+        _plt.show()
+    return fig, ax
 
 
 def histogram(
@@ -349,7 +364,7 @@ def histogram(
     kde_kind: str = "gaussian",
     out: bool = False,
     dont_show: bool = False,
-    **kwargs: dict[str,_T.Any],
+    **kwargs: dict[str, _T.Any],
 ) -> _T.Optional[dict[str, _T.Any]]:
     """
     Plots the data distribution with a histogram. The number of bins is defined
@@ -455,6 +470,7 @@ def histogram(
     n_bins = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
+
         _, n_bins = knuth_bin_width(data, return_bins=True)
     elif n_bins == "detailed":
         n_bins = int(1.5 * _np.sqrt(len(data)))
@@ -468,7 +484,9 @@ def histogram(
     counts = h[0]
     res = {"h": {"counts": counts, "bins": bins}}
     if kde:
-        regression = _kde_estimator(data=data, bins=n_bins, method=kde_kind, verbose=verbose)
+        regression = _kde_estimator(
+            data=data, bins=n_bins, method=kde_kind, verbose=verbose
+        )
         res["kde"] = regression.coeffs
         label = _kde_labels(kde_kind, regression.coeffs)
         _plt.plot(regression.x, regression.y, c=kcolor, label=label)
@@ -485,7 +503,7 @@ def scatterXHist(
     x: _T.Array,
     y: _T.Array,
     xerr: _T.Optional[float | _T.Array] = None,
-    **kwargs: dict[str,_T.Any],
+    **kwargs: dict[str, _T.Any],
 ) -> list[float, float]:
     """
     Make a scatter plot of a quantity 'x', with its projected histogram, relative
@@ -608,7 +626,8 @@ def errorbar(
     dataerr: _T.Array,
     x: _T.Array = None,
     xerr: _T.Optional[_T.Array] = None,
-    **kwargs: dict[str,_T.Any],
+    show: bool = True,
+    **kwargs: dict[str, _T.Any],
 ):
     """
     Plot data with error bars.
@@ -671,7 +690,7 @@ def errorbar(
     title = kwargs.get("title", "")
     fmt = kwargs.get("fmt", "x")
     x = _np.linspace(0, 1, len(data)) if x is None else x
-    _plt.figure(figsize=fsize)
+    fig = _plt.figure(figsize=fsize)
     _plt.errorbar(
         x,
         data,
@@ -688,7 +707,9 @@ def errorbar(
     _plt.xlabel(xlabel, fontdict=label_font)
     _plt.ylabel(ylabel, fontdict=label_font)
     _plt.title(title, fontdict=title_font)
-    _plt.show()
+    if show:
+        _plt.show()
+    return fig
 
 
 def regressionPlot(
@@ -696,7 +717,7 @@ def regressionPlot(
     x_data: _T.Optional[_T.Array] = None,
     y_data: _T.Optional[_T.Array] = None,
     f_type: str = "distribution",
-    **kwargs: dict[str,_T.Any],
+    **kwargs: dict[str, _T.Any],
 ):
     """
     Plot the regression model with the data and residuals.
@@ -707,7 +728,7 @@ def regressionPlot(
         The regression model to be plotted. You can either pass the already fitted
         model or a string indicating the kind of regression to be fitted. If a
         callable is passed, it must be a function that takes the data as input and
-        returns the fitted model. See `grasp.starts.fit_data` documentation for 
+        returns the fitted model. See `grasp.starts.fit_data` documentation for
         more information.The available string options are:
         - 'gaussian'
         - 'boltzmann'
@@ -717,7 +738,7 @@ def regressionPlot(
         - 'maxwell'
         - 'lorentzian'
         - 'lognormal'
-        - 'power' 
+        - 'power'
     x : ndarray or list, optional
         The indipendent variable data to be plotted. If not given, it will be
         simply be an array of the same size as the y data.
@@ -829,7 +850,7 @@ def regressionPlot(
     _plt.show()
 
 
-def seaborn(which: str, *args: tuple[str,_T.Any], **kwargs: dict[str,_T.Any]):
+def seaborn(which: str, *args: tuple[str, _T.Any], **kwargs: dict[str, _T.Any]):
     """
     Wrapper to make a seaborn plot.
 
@@ -851,7 +872,12 @@ def seaborn(which: str, *args: tuple[str,_T.Any], **kwargs: dict[str,_T.Any]):
     plot_call(*args, **kwargs)
 
 
-def _get_regression_model(regression_model: _T.RegressionModels, y_data: _T.Array, x_data: _T.Array, which: str) -> _T.RegressionModels:
+def _get_regression_model(
+    regression_model: _T.RegressionModels,
+    y_data: _T.Array,
+    x_data: _T.Array,
+    which: str,
+) -> _T.RegressionModels:
     """
     Get the regression model to be used for the plot.
 

@@ -139,7 +139,7 @@ class CartesianConversion:
     :math:`r = \sqrt{x^2 + y^2}`.
     """
 
-    def __init__(self, ra0 = None, dec0 = None, propagate_error: bool = True):
+    def __init__(self, ra0=None, dec0=None, propagate_error: bool = True):
         """The constructor"""
         super().__init__()
         self._values = None
@@ -328,7 +328,6 @@ class CartesianConversion:
             res = self._errFormula[7]["error_formula"]
         return res
 
-
     def _get_formula(self, propagate_error: bool = True):
         """Analytical formula getter for the cartesian conversion"""
         ra, dec = _sp.symbols("alpha delta")
@@ -358,7 +357,7 @@ class CartesianConversion:
         if propagate_error:
             self.error_propagation()
         return self
-    
+
     def error_propagation(self):
         """
         Compute the error propagation for the cartesian conversion.
@@ -417,7 +416,7 @@ class CartesianConversion:
             The errors to use for the computation. Needs to be in the order
             [ra_err, dec_err, pmra_err, pmdec_err].
         correlations :_List[ArrayLike], optional
-            The correlations to use for the computation. Needs to be in the order 
+            The correlations to use for the computation. Needs to be in the order
             [ra_dec_corr, ra_pmra_corr, ra_pmdec_corr,dec_pmra_corr, dec_pmdec_corr,
             pmra_pmdec_corr].
 

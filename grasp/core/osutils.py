@@ -78,7 +78,9 @@ def load_data(
         >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
     if tn is not None:
-        file_name = ("query_data" + file_format) if name is None else (name + file_format)
+        file_name = (
+            ("query_data" + file_format) if name is None else (name + file_format)
+        )
         file_path = _findTracknum(tn, complete_path=True)
         file = _os.path.join(file_path, file_name)
     else:
@@ -86,13 +88,15 @@ def load_data(
     data = _QTable.read(file, format=data_format)
     if as_sample:
         from grasp._utility.sample import Sample
-        if file_format=='.fits' and "OBJECT" in data.meta.keys():
+
+        if file_format == ".fits" and "OBJECT" in data.meta.keys():
             gc = data.meta["OBJECT"]
-            if gc == 'UNDEF':
+            if gc == "UNDEF":
                 gc = "UntrackedData"
         else:
             try:
                 from grasp import Cluster
+
                 gc = _os.path.dirname(file).split("/")[-2]
                 gc = Cluster(gc)
             except KeyError:
@@ -171,15 +175,8 @@ def get_file_list(tn: str = None, fold: str = None, key: str = None) -> str | li
         if fold is None:
             fold = _findTracknum(tn, complete_path=True)
             if len(fold) == 0:
-                raise FileNotFoundError(
-                    f"No data found with '{tn = }'"
-                )
-            fl = sorted(
-                [
-                    _os.path.join(fold, file)
-                    for file in _os.listdir(fold)
-                ]
-            )
+                raise FileNotFoundError(f"No data found with '{tn = }'")
+            fl = sorted([_os.path.join(fold, file) for file in _os.listdir(fold)])
         else:
             try:
                 paths = _findTracknum(tn, complete_path=True)

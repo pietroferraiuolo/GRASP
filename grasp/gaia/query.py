@@ -100,12 +100,13 @@ def available_tables(key: _gt.Optional[str] = None):
         out. Default is None, meaning all the tables will be printed.
     """
     from tabulate import tabulate
+
     tables = _Gaia.load_tables(only_names=True)
     tables: list[str] = [x.name for x in tables]
     if key is not None:
         tables = [x for x in tables if key in x]
-    row_tables = [tables[i:i+2] for i in range(0, len(tables), 2)]
-    print(tabulate(row_tables, tablefmt='plain'))
+    row_tables = [tables[i : i + 2] for i in range(0, len(tables), 2)]
+    print(tabulate(row_tables, tablefmt="plain"))
 
 
 class GaiaQuery:
@@ -178,7 +179,8 @@ class GaiaQuery:
     """
 
     def __init__(
-        self, gaia_table: _gt.Optional[_gt.Union[str, list[str]]] = "gaiadr3.gaia_source"
+        self,
+        gaia_table: _gt.Optional[_gt.Union[str, list[str]]] = "gaiadr3.gaia_source",
     ):
         """
         The Constructor
@@ -200,7 +202,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
     {cond}"""
         self.last_result = None
         self.last_query = None
-        self._queryInfo: dict[str,dict[str,_gt.Any|_u.Quantity|float|str]] = {
+        self._queryInfo: dict[str, dict[str, _gt.Any | _u.Quantity | float | str]] = {
             "Scan_Info": {
                 "RA": "None",
                 "DEC": "None",
@@ -273,7 +275,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius: float,
         gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs: dict[str,_gt.Any],
+        **kwargs: dict[str, _gt.Any],
     ) -> _gt.TabularData:
         """
         This function allows to perform an ADQL search into the Gaia catalogue with
@@ -321,13 +323,12 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
 
         """
         from grasp._utility.sample import Sample
-        ra: _gt.Optional[float|str] = kwargs.get("ra", None)
-        dec: _gt.Optional[float|str] = kwargs.get("dec", None)
+
+        ra: _gt.Optional[float | str] = kwargs.get("ra", None)
+        dec: _gt.Optional[float | str] = kwargs.get("dec", None)
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
-        self._queryInfo = {
-            "Scan_Info": {"RA": ra, "DEC": dec, "Scan_Radius": radius}
-        }
+        self._queryInfo = {"Scan_Info": {"RA": ra, "DEC": dec, "Scan_Radius": radius}}
         dat = get_kwargs(("data", "dat", "params", "parameters"), "source_id", kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"], _ = self._formatCheck(
             dat, "None"
@@ -351,7 +352,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius: float,
         gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs: dict[str,_gt.Any],
+        **kwargs: dict[str, _gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -409,9 +410,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
     def get_photometry(
         self,
         radius: float,
-        gc:_gt.Optional[_gt.GcInstance] = None,
+        gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs: dict[str,_gt.Any],
+        **kwargs: dict[str, _gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -471,7 +472,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         radius: float,
         gc: _gt.Optional[_gt.GcInstance] = None,
         save: bool = False,
-        **kwargs: dict[str,_gt.Any],
+        **kwargs: dict[str, _gt.Any],
     ):
         """
         A pre-constructed ADQL search into the Gaia catalogue with fixed data
@@ -527,7 +528,6 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         self._queryInfo["Scan_Info"]["Data_Acquired"] = rv
         return rv_sample
 
-
     def _run_query(
         self,
         gc_id: str,
@@ -580,7 +580,6 @@ Loading it..."""
             print(f"Sample number of sources: {len(sample):d}")
         return sample
 
-
     def _saveQuery(self, dat: _gt.TabularData, name: str):
         """
         Routine for saving the query with its information, in the 'query_data.txt'
@@ -595,6 +594,7 @@ Loading it..."""
 
         """
         from astropy.table import Table, QTable
+
         config = _cp.ConfigParser()
         tn = _ts()
         if name.upper() == "UNTRACKEDDATA":
@@ -612,6 +612,7 @@ Loading it..."""
         for section, options in self._queryInfo.items():
             config[section] = options
         import warnings
+
         warnings.warn(
             "The 'query_info.ini' will be deprecated in future versions, shifting to the use of fits headers",
             DeprecationWarning,
@@ -620,7 +621,6 @@ Loading it..."""
             config.write(configfile)
         print(data)
         print(info)
-
 
     def _writeHeader(self, data: _gt.AstroTable, name: str) -> _gt.AstroTable:
         """
@@ -646,11 +646,19 @@ Loading it..."""
                 "object name",
             ),
             "RA": (
-                sinfo["RA"].value if isinstance(sinfo["RA"],_u.Quantity) else sinfo["RA"],
+                (
+                    sinfo["RA"].value
+                    if isinstance(sinfo["RA"], _u.Quantity)
+                    else sinfo["RA"]
+                ),
                 "right ascension of scan centre [deg]",
             ),
             "DEC": (
-                sinfo["DEC"].value  if isinstance(sinfo["DEC"],_u.Quantity) else sinfo['DEC'],
+                (
+                    sinfo["DEC"].value
+                    if isinstance(sinfo["DEC"], _u.Quantity)
+                    else sinfo["DEC"]
+                ),
                 "declination of scan centre [deg]",
             ),
             "RADIUS": (
@@ -669,7 +677,6 @@ Loading it..."""
             data.meta[key] = value
         return data
 
-
     def _checkPathExist(self, dest: str) -> str:
         """
         Check if the path exists, and if not creates it.
@@ -686,10 +693,9 @@ Loading it..."""
             print(f"Path '{self._fold}' did not exist. Created.")
         return self._fold
 
-
     def _formatCheck(
-        self, data: str|list[str], conditions: str|list[str]
-    ) -> tuple[str,list[str]]:
+        self, data: str | list[str], conditions: str | list[str]
+    ) -> tuple[str, list[str]]:
         """
         Function to check and correct the format the 'data' and 'conditions'
         variables were imput with.
@@ -743,14 +749,13 @@ Loading it..."""
                 cond += conditions[-1]
         return dat, cond
 
-
     def _adqlWriter(
         self,
-        ra: str|_u.Quantity|float,
-        dec: str|_u.Quantity|float,
-        radius: str|_u.Quantity|float,
-        data: str|list[str],
-        conditions: str|list[str],
+        ra: str | _u.Quantity | float,
+        dec: str | _u.Quantity | float,
+        radius: str | _u.Quantity | float,
+        data: str | list[str],
+        conditions: str | list[str],
     ) -> str:
         """
         This function writes the query, correctly formatting all the variables
@@ -790,7 +795,7 @@ Loading it..."""
         return query
 
     def _get_coordinates(
-        self, gc: _gt.Optional[_gt.GcInstance], **kwargs: dict[str,_gt.Any]
+        self, gc: _gt.Optional[_gt.GcInstance], **kwargs: dict[str, _gt.Any]
     ) -> tuple[_gt.GcInstance, float, float, str]:
         """
         Function to get the coordinates of the cluster, either from the Cluster
@@ -814,6 +819,7 @@ Loading it..."""
 
         """
         from grasp._utility.cluster import Cluster
+
         if gc is None:
             ra: float = kwargs.get("ra", None)
             dec: float = kwargs.get("dec", None)
@@ -831,7 +837,7 @@ Loading it..."""
                 savename: str = gc.id
         return (gc, ra, dec, savename)
 
-    def __check_query_exists(self, name: str) -> bool|tuple[bool, str]:
+    def __check_query_exists(self, name: str) -> bool | tuple[bool, str]:
         """
         Checks wether the requested query already exist saved for the Cluster.
 
@@ -941,7 +947,7 @@ Loading it..."""
                 cols = []
                 for column in table.columns:
                     cols.append(column.name)
-                text += self.__format_tabular_print(lista = cols, tablefmt = "simple")
+                text += self.__format_tabular_print(lista=cols, tablefmt="simple")
                 text += "\n"
         else:
             text = (
@@ -953,9 +959,9 @@ Loading it..."""
             cols = []
             for column in tables.columns:
                 cols.append(column.name)
-            text += self.__format_tabular_print(lista = cols, tablefmt = "simple")
+            text += self.__format_tabular_print(lista=cols, tablefmt="simple")
         return text
-    
+
     def __format_tabular_print(self, lista: list[str], tablefmt: str) -> str:
         """
         Function to format the list of strings into a tabular format.
@@ -971,14 +977,16 @@ Loading it..."""
             The formatted string.
         """
         from tabulate import tabulate
+
         max_len: int = len(max(lista, key=len))
         terminal_min_size: int = 80
         ncols: int
-        if terminal_min_size/max_len <1.5:
+        if terminal_min_size / max_len < 1.5:
             ncols = 2
         else:
             from math import ceil
-            ncols = ceil(terminal_min_size/max_len)
-        righe: list[str] = [lista[i:i+ncols] for i in range(0, len(lista), ncols)]
+
+            ncols = ceil(terminal_min_size / max_len)
+        righe: list[str] = [lista[i : i + ncols] for i in range(0, len(lista), ncols)]
         tabula: str = tabulate(righe, tablefmt=tablefmt)
         return tabula

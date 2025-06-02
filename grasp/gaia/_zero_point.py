@@ -13,7 +13,8 @@ from grasp import types as _t
 
 
 def zero_point_correction(
-    *zargs: _t.Optional[list[_t.Array|float]], sample: _t.Optional[_t.TabularData] = None
+    *zargs: _t.Optional[list[_t.Array | float]],
+    sample: _t.Optional[_t.TabularData] = None
 ) -> _t.Array:
     """
     Computes the parallax zero point correction for a given sample of stars,
@@ -63,18 +64,22 @@ def zero_point_correction(
     """
     _zpt.load_tables()
     print(
-        """
-Using the "Zero Point Correction" tool from Pau Ramos
-(Lindergren, et al., A&A 649, A4 (2021)"""
+        """Using the "Zero Point Correction" tool from Pau Ramos
+(Lindergren, et al., A&A 649, A4 (2021)
+"""
     )
     if sample is None:
         sample = _zpt.get_zpt(*zargs)
     else:
         if isinstance(sample, _t._SampleProtocol):
             if sample.zp_corrected is False:
-                if hasattr(sample, 'parallax'):
-                    unit = sample.parallax.unit if hasattr(sample.parallax, 'unit') else 1
-                    sample['parallax'] -= nan_to_num(_zpt.zpt_wrapper(sample.to_pandas())) * unit
+                if hasattr(sample, "parallax"):
+                    unit = (
+                        sample.parallax.unit if hasattr(sample.parallax, "unit") else 1
+                    )
+                    sample["parallax"] -= (
+                        nan_to_num(_zpt.zpt_wrapper(sample.to_pandas())) * unit
+                    )
                     sample.zp_corrected = True
             else:
                 print("Parallaxes already corrected with the ZP algorithm.")
