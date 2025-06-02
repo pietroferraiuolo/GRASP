@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 import pandas as pd
+from astropy.table import Table
 from grasp import plots as gplt
 from grasp.stats import fit_distribution as regression
 
@@ -20,7 +21,7 @@ class TestPlots(unittest.TestCase):
         self.dec = np.random.uniform(-90, 90, 100)
         self.data = np.random.randn(100)
         self.dataerr = np.random.uniform(0.1, 0.5, 100)
-        self.sample = pd.DataFrame(
+        self.sample = Table(
             {
                 "ra": self.ra,
                 "dec": self.dec,
