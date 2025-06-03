@@ -49,7 +49,6 @@ from grasp.analyzers import calculus
 from grasp.analyzers._Rcode.r2py_models import (
     RegressionModel,
     GaussianMixtureModel,
-    PyRegressionModel,
 )
 from grasp._utility.base_formula import BaseFormula
 from grasp._utility.cluster import Cluster, available_clusters
