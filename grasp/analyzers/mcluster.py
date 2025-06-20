@@ -94,7 +94,14 @@ def mcluster_run(SSE: bool = False, **arguments: dict[str, int | float]) -> _QTa
         - u <0|1> (output units; 0= Nbody, 1= astrophysical)
     """
     args = []
-    for key, value in arguments.items():
+    for key, value in arguments.items():           
+        if key.isalnum():
+            if key[0].isalpha() and key[1:].isalnum():
+                if int(key[1:]) > 9:
+                    raise ValueError(
+                            f"Invalid argument '{key}'. Maybe you used it too many times?"
+                    )
+            key = key[0]
         args.append(f"-{key} {str(value)}")
     if SSE:
         if not _mcluster_sse in _os.listdir(_MCSC):
@@ -124,11 +131,15 @@ def mcluster_run(SSE: bool = False, **arguments: dict[str, int | float]) -> _QTa
         for line in process.stderr:
             print(line, end="")
     else:
-        data_path = _manage_output_files()
+        if 'o' in arguments.keys():
+            filename = arguments['o']
+        else:
+            filename = 'test'
+        data_path = _manage_output_files(filename=filename)
         return _QTable.read(data_path, format="ascii")
 
 
-def _manage_output_files() -> str:
+def _manage_output_files(filename: str) -> str:
     """
     Move the output files to a new folder with a timestamp as the name.
     """
@@ -136,8 +147,8 @@ def _manage_output_files() -> str:
     fold = _subp.run(["pwd"], capture_output=True, text=True)
     fold = fold.stdout.strip()
     _os.mkdir(_os.path.join(_SF, tn))
-    output_data = _get_file_list(fold=fold, key=".txt")
-    output_info = _get_file_list(fold=fold, key=".info")
+    output_data = _get_file_list(fold=fold, key=f"{filename}.txt")
+    output_info = _get_file_list(fold=fold, key=f"{filename}.info")
     data_path = _os.path.join(_SF, tn, output_data.split("/")[-1].strip())
     info_path = _os.path.join(_SF, tn, output_info.split("/")[-1].strip())
     _sh.move(output_data, data_path)

@@ -38,6 +38,12 @@ built upon installing them. If compiler errors arise (mentioning `GLIBCXX_3.4.XX
 conda install -c conda-forge gcc
 ```
 
+If the error does not disappear, try updating directly the `libstdcxx-ng` package
+
+```bash
+conda install -c conda-forge libstdcxx-ng
+```
+
 ### Install latex parser dependencies: ANTLR4
 Since the `formulary` module, which handles formulas definitions and computations, use both the sympy
 and the latex syntax interpreter, the latter needs an additional package to run: the ANTLR4 python 
