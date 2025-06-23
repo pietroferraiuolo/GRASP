@@ -40,7 +40,7 @@ title_font: dict[str, str | int] = {
     # "style": "italic",
     "color": "black",
     "weight": "semibold",
-    "size": 20,
+    "size": 17,
 }
 
 default_figure_size: tuple[float, float] = (6.4, 5.2)
@@ -474,6 +474,7 @@ def histogram(
         _, n_bins = knuth_bin_width(data, return_bins=True)
     elif n_bins == "detailed":
         n_bins = int(1.5 * _np.sqrt(len(data)))
+    _plt.ioff()
     _plt.figure(figsize=fsize)
     h = _plt.hist(data, bins=n_bins, color=hcolor, alpha=alpha)
     _plt.ylabel("counts")
