@@ -7,9 +7,10 @@ sympy>=1.13.0
 pandas
 astroML==1.0.2.post1
 seaborn==0.13.2
-matplotlib==3.9.3
+matplotlib
 astroquery==0.4.7
 gaiadr3-zeropoint
 nsstools
 antlr4-python3-runtime==4.11
 tabulate
+tqdm>=4.60.0
