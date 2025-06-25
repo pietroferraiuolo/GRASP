@@ -63,6 +63,16 @@ Predicted : {self._predicted}
         return str_
 
     @property
+    def test_data(self):
+        """
+        The data used to test the model.
+        """
+        if "test_data" in self.model:
+            return _np.reshape(self.model["test_data"], (self.ndG[1], self.model['n_test'])).T
+        else:
+            raise ValueError("No test data available in the model.") 
+
+    @property
     def data(self):
         """
         The data used to fit the model.

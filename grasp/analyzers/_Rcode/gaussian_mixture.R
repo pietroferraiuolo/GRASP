@@ -75,6 +75,8 @@ KFoldGMM <- function(data, K, G = 2, ...) {
     train_data <- data[train_idx, , drop = FALSE]
     test_data <- data[test_idx, , drop = FALSE]
     fit <- Mclust(train_data, G = G, ...)
+    fit$test_data <- test_data
+    fit$n_test <- nrow(test_data)
     # Predict on test set
     pred <- predict(fit, test_data)
     # Log-likelihood of test set under fitted model
