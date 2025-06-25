@@ -254,11 +254,16 @@ Harris Catalog 2010 edition Parameters
         return text
 
 
-def available_clusters():
+def available_clusters(out:bool = False) -> None|str:
     """
     Prints all the available clusters present tin the Harris Catalog 2010
     edition.
     The clusters are stored in the grasp/sysdata/_Catalogue.xlsx file.
+    
+    Parameters
+    ----------
+    out : bool, optional
+        If True, returns the list of clusters as a string instead of printing it.
 
     Returns
     -------
@@ -270,5 +275,8 @@ def available_clusters():
     catalog = pd.read_excel(CATALOG_FILE, index_col=0)
     print(f"Available clusters: {len(catalog)}")
     gclist = catalog.index.tolist()
-    gclist = [gclist[i : i + 7] for i in range(0, len(gclist), 7)]
-    print(tabulate(gclist, tablefmt="simple"))
+    if out:
+        return catalog
+    else:
+        gclist = [gclist[i : i + 7] for i in range(0, len(gclist), 7)]
+        print(tabulate(gclist, tablefmt="simple"))
