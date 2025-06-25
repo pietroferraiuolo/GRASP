@@ -29,8 +29,7 @@ from astropy.table import Table
 import matplotlib.pyplot as plt
 import os, shutil, pandas as pd, numpy as np
 from grasp.plots import label_font, title_font
-from astropy.units import Quantity as _Quantity
-from typing import Optional as _Optional, Union as _Union, Any as _Any
+from grasp import types as _ty
 from grasp.core.folder_paths import (
     CLUSTER_DATA_FOLDER,
     CLUSTER_MODEL_FOLDER,
@@ -59,30 +58,30 @@ class Cluster:
     >>> ngc104 = Cluster('ngc104')
     """
 
-    def __init__(self, name: _Optional[str] = None, **params: dict[str, _Any]):
+    def __init__(self, name: _ty.Optional[str] = None, **params: dict[str, _ty.Any]):
         """The constructor"""
         if name == "UntrackedData" or name is None:
             print("Not a Cluster: no model available")
             self.data_path: str = UNTRACKED_DATA_FOLDER
             self.id: str = "UntrackedData"
-            self.ra: _Optional[_Union[float, _Quantity]] = params.get("ra", None)
-            self.dec: _Optional[_Union[float, _Quantity]] = params.get("dec", None)
-            self.model: _Optional[Table | pd.DataFrame] = None
+            self.ra: _ty.Optional[float|_ty.Quantity] = params.get("ra", None)
+            self.dec: _ty.Optional[float|_ty.Quantity] = params.get("dec", None)
+            self.model: _ty.Optional[Table | pd.DataFrame] = None
         else:
             self.id = name.upper()
             self.data_path = CLUSTER_DATA_FOLDER(self.id)
             self.model_path = CLUSTER_MODEL_FOLDER(self.id)
             parms = self._load_cluster_parameters(self.id)
-            self.ra: _Quantity | float = parms.loc["ra"] * u.deg
-            self.dec: _Quantity | float = parms.loc["dec"] * u.deg
-            self.dist: _Quantity | float = parms.loc["dist"] * u.kpc
-            self.rc: _Quantity | float = parms.loc["rc"] / 60 * u.deg
-            self.rh: _Quantity | float = parms.loc["rh"] / 60 * u.deg
+            self.ra: _ty.Quantity | float = parms.loc["ra"] * u.deg
+            self.dec: _ty.Quantity | float = parms.loc["dec"] * u.deg
+            self.dist: _ty.Quantity | float = parms.loc["dist"] * u.kpc
+            self.rc: _ty.Quantity | float = parms.loc["rc"] / 60 * u.deg
+            self.rh: _ty.Quantity | float = parms.loc["rh"] / 60 * u.deg
             self.w0: float = parms.loc["w0"]
             self.logc: float = parms.loc["logc"]
-            self.rt: _Quantity | float = self.rc * 10**self.logc
+            self.rt: _ty.Quantity | float = self.rc * 10**self.logc
             self.cflag: bool = True if parms.loc["collapsed"] == "Y" else False
-            self.model: _Optional[Table | pd.DataFrame] = self._load_king_model()
+            self.model: _ty.Optional[Table | pd.DataFrame] = self._load_king_model()
 
     def __str__(self):
         """String representation"""
@@ -92,13 +91,13 @@ class Cluster:
         """Representation"""
         return self.__get_repr()
 
-    def __setattr__(self, name: str, value: _Any):
+    def __setattr__(self, name: str, value: _ty.Any):
         """
         Set the attribute value.
         """
         self.__dict__[name] = value
 
-    def show_model(self, figure_out: bool = False, **kwargs: dict[str, _Any]):
+    def show_model(self, figure_out: bool = False, **kwargs: dict[str, _ty.Any]):
         """
         Function for plotting the loaded king model.
 
@@ -109,11 +108,11 @@ class Cluster:
             scale : scale of the axes, default linear.
             grid  : grid on the plot
         """
-        scale: _Optional[str] = kwargs.get("scale", None)
-        xscale: _Optional[str] = kwargs.get("xscale", None)
-        yscale: _Optional[str] = kwargs.get("yscale", None)
-        xlim: _Optional[tuple[float]] = kwargs.get("xlim", None)
-        ylim: _Optional[tuple[float]] = kwargs.get("ylim", None)
+        scale: _ty.Optional[str] = kwargs.get("scale", None)
+        xscale: _ty.Optional[str] = kwargs.get("xscale", None)
+        yscale: _ty.Optional[str] = kwargs.get("yscale", None)
+        xlim: _ty.Optional[tuple[float]] = kwargs.get("xlim", None)
+        ylim: _ty.Optional[tuple[float]] = kwargs.get("ylim", None)
         c: str = kwargs.get("color", "black")
         grid: bool = kwargs.get("grid", False)
         fig = plt.figure(figsize=(8, 6))
@@ -145,7 +144,7 @@ class Cluster:
         if figure_out:
             return fig
 
-    def _load_cluster_parameters(self, name: str) -> pd.Series | pd.DataFrame:
+    def _load_cluster_parameters(self, name: str) -> pd.DataFrame:
         """
         Loads the parameters of the requested cluster from the Harris Catalog
         2010 Globular Cluster Database, written in the Catalogue.xlsx file
@@ -157,7 +156,7 @@ class Cluster:
 
         Returns
         -------
-        cat_row : TYPE
+        cat_row : Series 
             Pandas Series with all the necessary paramenters to ilitialize the Cluster Class.
         """
         catalog = pd.read_excel(CATALOG_FILE, index_col=0)
@@ -254,7 +253,7 @@ Harris Catalog 2010 edition Parameters
         return text
 
 
-def available_clusters(out:bool = False) -> None|str:
+def available_clusters(out:bool = False) -> _ty.Optional[_ty.DataFrame]:
     """
     Prints all the available clusters present tin the Harris Catalog 2010
     edition.
@@ -267,8 +266,8 @@ def available_clusters(out:bool = False) -> None|str:
 
     Returns
     -------
-    list
-        List of available clusters.
+    catalog : pd.DataFrame
+        DataFrame containing the catalog of clusters.
     """
     from tabulate import tabulate
 

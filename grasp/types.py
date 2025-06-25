@@ -12,6 +12,7 @@ from typing import (
 from numpy.typing import ArrayLike
 from pandas import DataFrame, Series
 from astropy.table import Table, QTable
+from astropy.units import Quantity
 import sympy as _sp
 
 if TYPE_CHECKING:
