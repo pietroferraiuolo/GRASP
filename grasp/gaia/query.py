@@ -262,13 +262,15 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         result : astropy.table.QTable
             The result of the query.
         """
+        from grasp._utility.sample import Sample
+
         job = _Gaia.launch_job_async(adql_cmd)
         result = job.get_results()
         name = "UntrackedData"
         self._queryInfo["Scan_Info"]["Command"] = adql_cmd
         if save:
             self._saveQuery(result, name)
-        return result
+        return Sample(result)
 
     def free_gc_query(
         self,
@@ -322,7 +324,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             Result of the async query, stored into an astropy table.
 
         """
-        from grasp._utility.sample import Sample
+        from grasp._utility.sample import GcSample
 
         ra: _gt.Optional[float | str] = kwargs.get("ra", None)
         dec: _gt.Optional[float | str] = kwargs.get("dec", None)
@@ -343,7 +345,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         else:
             self._queryInfo["Scan_Info"]["Conditions_Applied"] = cond
         samp = self._run_query(savename, ra, dec, radius, dat, cond, save)
-        sample = Sample(samp, gc=gc)
+        sample = GcSample(samp, gc=gc)
         sample.qinfo = self._queryInfo["Scan_Info"]
         return sample
 

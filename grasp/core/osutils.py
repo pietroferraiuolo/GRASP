@@ -26,10 +26,10 @@ querypath = _fn.QUERY_DATA_FOLDER
 
 def load_data(
     *,
+    name: _opt[str] = None,
     tn: _opt[str] = None,
     data_format: str = "fits",
     file_format: str = ".fits",
-    name: _opt[str] = None,
     as_sample: bool = True,
 ) -> _QTable | _Any:
     """
@@ -87,7 +87,7 @@ def load_data(
         file = name
     data = _QTable.read(file, format=data_format)
     if as_sample:
-        from grasp._utility.sample import Sample
+        from grasp._utility.sample import Sample, GcSample
 
         if file_format == ".fits" and "OBJECT" in data.meta.keys():
             gc = data.meta["OBJECT"]
@@ -99,9 +99,12 @@ def load_data(
 
                 gc = _os.path.dirname(file).split("/")[-2]
                 gc = Cluster(gc)
-            except KeyError:
+            except Exception:
                 gc = "UntrackedData"
-        data = Sample(data, gc=gc)
+        if gc == "UntrackedData":
+            data = Sample(data)
+        else:
+            data = Sample(data, gc=gc)
     return data
 
 

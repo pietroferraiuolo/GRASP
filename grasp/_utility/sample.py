@@ -34,7 +34,6 @@ class Sample(_QTable):
     def __init__(
         self,
         data: _gt.AstroTable = None,
-        gc: _gt.Optional[_gt.GcInstance] = None,
         **kwargs: dict[str, _gt.Any],
     ):
         """
@@ -59,21 +58,6 @@ class Sample(_QTable):
         self._bckupSample = self.__create_backup_table()
         self.qinfo = None
         self.is_simulation = self.__check_simulation()
-        if isinstance(gc, str):
-            if gc == "UNTRACKEDDATA" or gc == "UntrackedData":
-                from astropy.units import deg
-
-                self.gc = _Cluster("UntrackedData")
-                if "ra" in self.colnames and "dec" in self.colnames:
-                    self.gc.ra = self["ra"].mean() * deg
-                    self.gc.dec = self["dec"].mean() * deg
-                else:
-                    self.gc.ra = 0.0
-                    self.gc.dec = 0.0
-            else:
-                self.gc = _Cluster(gc)
-        else:
-            self.gc = gc
         self._merge_info: _pd.DataFrame = None
         self.zp_corrected: bool = False
 
@@ -247,32 +231,6 @@ class Sample(_QTable):
         for col in self._bckupSample.itercols():
             self.add_column(col.copy())
 
-    def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> None:
-        """
-        Updates the parameters of the cluster object.
-
-        Parameters
-        ----------
-        **kwargs : dict
-            The parameters to update.
-        """
-        if self.is_simulation:
-            return "This is a simulation data sample. No GC available."
-        for key in kwargs:
-            if hasattr(self.gc, key):
-                setattr(self.gc, key, kwargs[key])
-            else:
-                if not self.gc.id == "UntrackedData":
-                    text = self.__get_repr()
-                    text = text.split("\n")[5:]
-                    ptxt = "\n".join(text)
-                else:
-                    ptxt = ""
-                raise AttributeError(
-                    f"'Cluster' object has no attribute '{key}'\n{ptxt}"
-                )
-        print(self.gc.__str__())
-        return
 
     def apply_conditions(
         self, conditions: str | list[str] | dict[str, str], inplace: bool = False
@@ -347,7 +305,10 @@ class Sample(_QTable):
             print(f"Cut {(1-N_new/N_old)*100:.3f}% of the sample")
             return
         else:
-            return Sample(filtered_sample, self.gc)
+            if hasattr(self, 'gc'):
+                return GcSample(filtered_sample, self.gc)
+            else:
+                return Sample(filtered_sample)
 
     def __check_simulation(self) -> bool:
         """Check wether the data the sample has been instanced with is
@@ -375,6 +336,8 @@ class Sample(_QTable):
         else:
             is_simulation = False
         return is_simulation
+    
+    save = _QTable.write
 
     def __get_repr(self) -> str:
         """Gets the str representation"""
@@ -419,3 +382,81 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
         for col in self.colnames:
             new_table[col] = self[col]
         return new_table
+
+
+class GcSample(Sample):
+    """
+    Subclass of Sample for handling the globular cluster sample.
+    It is a Sample with the gc attribute set to a Cluster object.
+    """
+
+    def __init__(self, data: _gt.AstroTable = None, gc: _gt.GcInstance = None, **kwargs: dict[str, _gt.Any]):
+        """
+        Class for handling the globular cluster sample.
+
+        Parameters
+        ----------
+        data : astropy.Table, pandas.DataFrame, dict
+            Table containing the retrieved sample's data.
+        gc : grasp.cluster.Cluster
+            Globular cluster object used for the query.
+        """
+        super().__init__(data, **kwargs)
+        if isinstance(gc, str):
+            if gc == "UNTRACKEDDATA" or gc == "UntrackedData":
+                from astropy.units import deg
+
+                self.gc = _Cluster("UntrackedData")
+                if "ra" in self.colnames and "dec" in self.colnames:
+                    self.gc.ra = self["ra"].mean() * deg
+                    self.gc.dec = self["dec"].mean() * deg
+                else:
+                    self.gc.ra = 0.0
+                    self.gc.dec = 0.0
+            else:
+                self.gc = _Cluster(gc)
+        else:
+            self.gc = gc
+            
+    
+    def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> None:
+        """
+        Updates the parameters of the cluster object.
+
+        Parameters
+        ----------
+        **kwargs : dict
+            The parameters to update.
+        """
+        if self.is_simulation:
+            return "This is a simulation data sample. No GC available."
+        for key in kwargs:
+            if hasattr(self.gc, key):
+                setattr(self.gc, key, kwargs[key])
+            else:
+                if not self.gc.id == "UntrackedData":
+                    text = self.__get_repr()
+                    text = text.split("\n")[5:]
+                    ptxt = "\n".join(text)
+                else:
+                    ptxt = ""
+                raise AttributeError(
+                    f"'Cluster' object has no attribute '{key}'\n{ptxt}"
+                )
+        print(self.gc.__str__())
+        return
+
+
+
+class _BaseSample():
+    
+    """
+    Base class for Sample and GcSample.
+    It is used to define the common methods and attributes for both classes.
+    """
+
+    def __init__(self, data: _gt.AstroTable = None, **kwargs: dict[str, _gt.Any]):
+        self.data = data
+        self.kwargs = kwargs
+        self.qinfo = None
+        self.is_simulation = False
