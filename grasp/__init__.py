@@ -39,8 +39,6 @@ _utility:
 """
 
 from .__version__ import *
-from grasp.core.osutils import load_data
-import grasp.core.folder_paths as gpaths
 
 from grasp.gaia._zero_point import zero_point_correction
 from grasp.gaia.query import GaiaQuery, available_tables
@@ -50,14 +48,18 @@ from grasp.analyzers._Rcode.r2py_models import (
     RegressionModel,
     GaussianMixtureModel,
 )
-from grasp._utility.base_classes import BaseFormula
 from grasp._utility.cluster import Cluster, available_clusters
-from grasp._utility.sample import Sample
+from grasp._utility.sample import Sample, GcSample
+from grasp.formulary import Formulary, load_base_formulary
 
 from grasp import stats
 from grasp import plots
-from grasp.formulary import Formulary, load_base_formulary
+from grasp import analyzers
+from grasp import core
 
+osu = core.osutils
+load_data = osu.load_data
+gpaths = core.folder_paths
 
 def dr3():
     """Instance a GaiaQuery with DR3"""

@@ -26,32 +26,34 @@ querypath = _fn.QUERY_DATA_FOLDER
 
 def load_data(
     *,
-    name: _opt[str] = None,
+    filepath: _opt[str] = None,
     tn: _opt[str] = None,
     data_format: str = "fits",
     file_format: str = ".fits",
     as_sample: bool = True,
+    **kwargs: _Any,
 ) -> _QTable | _Any:
     """
     Loads the data from a file as an Astropy quantity table.
 
     Parameters
     ----------
-    tn : str, optional
-        Tracking number of the data to load. If provided, the function will search
-        for the file in the corresponding tracking number folder.
+    filepath : str, optional
+        The complete path to the file to load. This can be omitted if tn is provided.
     data_format : str, optional
         The format of the file to load. Default is 'fits'. Refer to the Astropy
         QTable.read documentation for supported formats.
     file_format : str, optional
         The file extension to use when constructing the file name. Default is '.fits'.
-    name : str, optional
-        Name of the specific data file to load. If not specified, the default
-        name is 'query_data.fits'. If `tn` is not provided, `name` must be the
-        complete file path to the file to load (e.g., '~/data/your_data.fits').
     as_sample : bool, optional
         If True, the loaded data will be returned as a Sample object; otherwise,
         it will be returned as a QTable.
+
+    Additional Parameters
+    ---------------------
+    tn : str, optional
+        Tracking number of the data to load. If provided, the function will search
+        for the file in the corresponding tracking number folder.
 
     Returns
     -------
@@ -77,14 +79,15 @@ def load_data(
     Load data as a QTable instead of a Sample:
         >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
+    tn = kwargs.get('tn', None)
     if tn is not None:
         file_name = (
-            ("query_data" + file_format) if name is None else (name + file_format)
+            ("query_data" + file_format) if filepath is None else (filepath + file_format)
         )
         file_path = _findTracknum(tn, complete_path=True)
         file = _os.path.join(file_path, file_name)
     else:
-        file = name
+        file = filepath
     data = _QTable.read(file, format=data_format)
     if as_sample:
         from grasp._utility.sample import Sample, GcSample

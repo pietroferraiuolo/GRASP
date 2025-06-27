@@ -190,10 +190,6 @@ class BaseSample(_QTable):
             return f"Simulated data sample" + "\n" + super().__str__()
         else:
             return str(self.gc) + "\n" + super().__str__()
-        
-    def __repr__(self):
-        """The representation"""
-        return self.__get_repr()
 
     def __getattr__(self, attr: str):
         """The attribute getter"""

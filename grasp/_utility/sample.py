@@ -54,6 +54,9 @@ class Sample(_BaseSample):
         # Accepts data as QTable, Table, DataFrame, or dict
         super().__init__(data, **kwargs)
 
+    def __repr__(self):
+        """The representation"""
+        return self.__get_repr()
 
     def join(
         self, other: _gt.TabularData, keep: str = "both", inplace: bool = False
@@ -163,13 +166,8 @@ class Sample(_BaseSample):
 
         if self.is_simulation:
             gctxt = f"""Simulated data sample"""
-        elif self.gc.id == "UntrackedData":
-            gctxt = f"""Gaia data retrieved at coordinates
-RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
-"""
         else:
-            gctxt = f"""Data sample for cluster {self.gc.id}
-"""
+            gctxt = f"""Query data sample retrieved from Gaia"""
         stxt = "\n"  # "\nData Columns:\n"
         names: list[str] = [name.lower() for name in self.colnames]
         max_len: int = len(max(names, key=len))
@@ -221,6 +219,10 @@ class GcSample(_BaseSample):
                 self.gc = _Cluster(gc)
         else:
             self.gc = gc
+
+    def __repr__(self):
+        """The representation"""
+        return self.__get_repr()
     
     def join(
         self, other: _gt.TabularData, keep: str = "both", inplace: bool = False
