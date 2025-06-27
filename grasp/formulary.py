@@ -10,7 +10,7 @@ Description
 import os as _os
 import sympy as _sp
 from sympy.parsing import latex as _latex, sympy_parser as _symparser
-from grasp._utility.base_formula import BaseFormula as _BaseFormula
+from grasp._utility.base_classes import BaseFormula as _BaseFormula
 from grasp.core.folder_paths import (
     SYS_DATA_FOLDER as _sdf,
     FORMULARY_BASE_FILE as _fbf,

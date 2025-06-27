@@ -256,6 +256,9 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             ESA Cosmos</a> documentation for query examples, and to the
             <a href=https://ivoa.net/documents/ADQL/20230418/PR-ADQL-2.1-20230418.html#tth_sEc4.2.9>
             ADQL</a> documentation of syntax and functions.
+        save : bool, optional
+            Whether to save the obtained data with its information or not.
+            Default is False, meaning the data will not be saved.
 
         Returns
         -------
