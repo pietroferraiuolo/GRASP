@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 from astropy.table import QTable
-from grasp._utility.sample import Sample
+from grasp._utility.sample import Sample, GcSample
 
 class TestSample(unittest.TestCase):
     def setUp(self):
@@ -9,7 +9,7 @@ class TestSample(unittest.TestCase):
         data['a'] = np.arange(10)
         data['b'] = np.linspace(0, 1, 10)
         data['c'] = np.random.choice([np.nan, 1], size=10)
-        self.sample = Sample(data, gc='UntrackedData')
+        self.sample = GcSample(data, gc='UntrackedData')
 
     def test_drop_columns(self):
         self.sample.drop_columns(['b'])
@@ -42,7 +42,7 @@ class TestSample(unittest.TestCase):
     def test_join(self):
         other = self.sample.copy()
         joined = self.sample.join(other)
-        self.assertIsInstance(joined, Sample)
+        self.assertIsInstance(joined, GcSample)
         for col in self.sample.colnames:
             self.assertIn(col, joined.colnames)
 

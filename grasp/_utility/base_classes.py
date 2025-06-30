@@ -180,9 +180,9 @@ class BaseSample(_QTable):
             super().__init__(data, **kwargs)
         self._bckupSample = self.__create_backup_table()
         self.qinfo = None
-        self.is_simulation = self.__check_simulation()
         self._merge_info: _gt.DataFrame = None
         self.zp_corrected: bool = False
+        self.is_simulation = self.__check_simulation() if not data is None else False
 
     def __str__(self):
         """The string representation"""
