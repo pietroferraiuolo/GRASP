@@ -12,8 +12,6 @@ on:
       - './scripts/**'
   pull_request:
     branches: [ main ]
-  schedule:
-    - cron: "* 1 * * 1"
 jobs:
   build:
     runs-on: ${{ matrix.os }}
