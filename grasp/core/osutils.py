@@ -107,7 +107,7 @@ def load_data(
         if gc == "UntrackedData":
             data = Sample(data)
         else:
-            data = Sample(data, gc=gc)
+            data = GcSample(data, gc=gc)
     return data
 
 

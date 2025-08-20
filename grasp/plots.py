@@ -179,13 +179,13 @@ def doubleHistScatter(
             reg_x.x,
             reg_x.y,
             color=colorx,
-            label=f"$\mu$={reg_x.coeffs[1]:.3f}\n$\sigma^2$={reg_x.coeffs[2]:.3f}",
+            label=f"$\\mu$={reg_x.coeffs[1]:.3f}\n$\\sigma^2$={reg_x.coeffs[2]:.3f}",
         )
         ax_histy.plot(
             reg_y.x,
             reg_y.x,
             color=colory,
-            label=f"$\mu$={reg_y.coeffs[1]:.3f}\n$\sigma^2$={reg_y.coeffs[2]:.3f}",
+            label=f"$\\mu$={reg_y.coeffs[1]:.3f}\n$\\sigma^2$={reg_y.coeffs[2]:.3f}",
         )
         ax_histx.legend(loc="best", fontsize="small")
         ax_histy.legend(loc="best", fontsize="small")
@@ -244,7 +244,7 @@ def colorMagnitude(
     a = kwargs.get("alpha", 0.8)
     cmap = kwargs.get("cmap", "rainbow_r")
     fsize = kwargs.get("figsize", default_figure_size)
-    fig, ax = _plt.subplots(nrows=1, ncols=1, figsize=fsize)
+    _, ax = _plt.subplots(nrows=1, ncols=1, figsize=fsize)
     ax.set_facecolor(bgc)
     if sample is not None:
         g = sample["phot_g_mean_mag"].value
@@ -324,6 +324,10 @@ def spatial(sample: _T.TabularData, show: bool = True, **kwargs: dict[str, _T.An
         Transparency of the scattered data points.
     figsize : tuple
         Size of the figure.
+    xlim : tuple
+        Limits for the x-axis.
+    ylim : tuple
+        Limits for the y-axis.
     colorbar : bool
         If True, a colorbar will be shown.
     clabel : str
@@ -341,16 +345,20 @@ def spatial(sample: _T.TabularData, show: bool = True, **kwargs: dict[str, _T.An
     colorbar = kwargs.get("colorbar", False)
     clabel = _osu.get_kwargs(("colorbar_label", "clabel", "cl"), "", kwargs)
     cmap = kwargs.get("cmap", None)
+    xlim = kwargs.get("xlim", None)
+    ylim = kwargs.get("ylim", None)
     title = kwargs.get("title", "Spatial Distribution")
     axxis = kwargs.get("axis", "equal")
     ra = sample["ra"].value
     dec = sample["dec"].value
     fig, ax = _plt.subplots(figsize=fsize)
-    _plt.xlabel(r"$DEC$ [deg]", fontdict=label_font)
-    _plt.ylabel(r"$RA$ [deg]", fontdict=label_font)
+    _plt.xlabel(r"$RA$ [deg]", fontdict=label_font)
+    _plt.ylabel(r"$DEC$ [deg]", fontdict=label_font)
     _plt.title(title, fontdict=title_font)
     ax.axis(axxis)
     _plt.scatter(ra, dec, c=col, alpha=alpha, s=size, cmap=cmap)
+    _plt.xlim(xlim)
+    _plt.ylim(ylim)
     if colorbar:
         _plt.colorbar(label=clabel)
     if show:
@@ -505,7 +513,7 @@ def scatterXHist(
     y: _T.Array,
     xerr: _T.Optional[float | _T.Array] = None,
     **kwargs: dict[str, _T.Any],
-) -> list[float, float]:
+) -> list[float]:
     """
     Make a scatter plot of a quantity 'x', with its projected histogram, relative
     to a quantity 'y'.
@@ -768,8 +776,11 @@ def regressionPlot(
         Main plot style. Only works when passing a linear regression
         model. Default is '-' (normal "solid" plot).
     size : int or float
-        Size of the scattered data points in both plots.
+        Size of the scattered data points in the main plot.
         Alias: 's'.
+    rsize : int or float
+        Size of the scattered data points in the residuals plot.
+        Alias: 'rs'.
     plot_color : str
         Color of the data plot. Aliases:
         - 'pcolor'
@@ -790,7 +801,8 @@ def regressionPlot(
     rm = _get_regression_model(regression_model, y_data, x_data, f_type)
     D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
     xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
-    s = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
+    rs = _osu.get_kwargs(("rsize", "rs"), 2.5, kwargs)
+    ps = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)
     xlabel = kwargs.get("xlabel", "")
     title = kwargs.get("title", "")
@@ -806,16 +818,17 @@ def regressionPlot(
     # ---------------
     # data plot (with conditions)
     # ---------------
+    fax.plot(rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs))
     if isinstance(rm, _RegressionModel) and rm.kind == "linear":
         x = rm.data["x"].to_numpy()
         y = rm.data["y"].to_numpy()
-        fax.plot(x, y, c=pc, markersize=s, linewidth=1.0, alpha=0.8, label="Data")
+        fax.plot(x, y, c=pc, markersize=ps, linewidth=1.0, alpha=0.8, label="Data")
     elif f_type == "datapoint":
         fax.scatter(
             rm.x,
             rm.data,
             c=pc,
-            s=s,
+            s=ps,
             linewidth=1.0,
             alpha=0.8,
             label="Data",
@@ -827,7 +840,6 @@ def regressionPlot(
     # ---------------
     # fit plot in red color (default)
     # ---------------
-    fax.plot(rm.x, rm.y, fmt, c=fc, label=_kde_labels(rm.kind, rm.coeffs))
     fax.set_ylabel("counts")
     fax.set_xlim(xlim)
     fax.legend(loc="best", fontsize="medium")
@@ -840,13 +852,13 @@ def regressionPlot(
     rax.set_xlabel(xlabel)
     rax.set_xlim(xlim)
     rax.plot(
-        [rm.x.min() * 1.1, rm.x.max() * 1.1],
+        [rm.x.min() * 0.9, rm.x.max() * 1.1],
         [0, 0],
         c="gray",
         alpha=0.8,
         linestyle="--",
     )
-    rax.plot(rm.x, rm.residuals, rfmt, c=rc, markersize=s, linewidth=1.0, alpha=0.8)
+    rax.plot(rm.x, rm.residuals, rfmt, c=rc, markersize=rs, linewidth=1.0, alpha=0.8)
     fig.suptitle(title, size=20, style="italic", family="cursive")
     _plt.show()
 

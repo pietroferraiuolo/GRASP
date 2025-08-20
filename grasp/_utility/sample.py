@@ -179,7 +179,7 @@ class Sample(_BaseSample):
             from math import ceil
 
             ncols = ceil(terminal_min_size / max_len)
-        righe: list[str] = [names[i : i + ncols] for i in range(0, len(names), ncols)]
+        righe: list[list[str]] = [names[i : i + ncols] for i in range(0, len(names), ncols)]
         headers = ["Data Columns:"] + [""] * (ncols - 1)
         tabula: str = tabulate(righe, headers=headers, tablefmt="presto")
         stxt += tabula.replace("|", " ").replace("+", "-")
@@ -359,6 +359,9 @@ class GcSample(_BaseSample):
         if self.is_simulation:
             gctxt = f"""Simulated data sample"""
         elif self.gc.id == "UntrackedData":
+            if self.gc.ra is None or self.gc.dec is None:
+                self.gc.ra = (self['ra'].max() - self['ra'].min())/2
+                self.gc.dec = (self['dec'].max() - self['dec'].min())/2
             gctxt = f"""Gaia data retrieved at coordinates
 RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
 """
@@ -376,7 +379,7 @@ RA={self.gc.ra:.2f} DEC={self.gc.dec:.2f}
             from math import ceil
 
             ncols = ceil(terminal_min_size / max_len)
-        righe: list[str] = [names[i : i + ncols] for i in range(0, len(names), ncols)]
+        righe: list[list[str]] = [names[i : i + ncols] for i in range(0, len(names), ncols)]
         headers = ["Data Columns:"] + [""] * (ncols - 1)
         tabula: str = tabulate(righe, headers=headers, tablefmt="presto")
         stxt += tabula.replace("|", " ").replace("+", "-")
