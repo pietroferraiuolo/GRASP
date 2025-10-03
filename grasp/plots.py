@@ -860,7 +860,8 @@ def regressionPlot(
     )
     rax.plot(rm.x, rm.residuals, rfmt, c=rc, markersize=rs, linewidth=1.0, alpha=0.8)
     fig.suptitle(title, size=20, style="italic", family="cursive")
-    _plt.show()
+    # _plt.show()
+    return fig, fax, rax
 
 
 def seaborn(which: str, *args: tuple[str, _T.Any], **kwargs: dict[str, _T.Any]):
