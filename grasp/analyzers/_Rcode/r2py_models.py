@@ -11,21 +11,42 @@ to the model parameters and results.
 
 """
 
+from __future__ import annotations
+
+import logging as _logging
+import warnings as _warnings
+
 import numpy as _np
-import rpy2.robjects as _ro
-from rpy2.robjects import (
-    # rinterface as _ri,
-    globalenv as _genv,
-)
-from rpy2.robjects import (
-    numpy2ri as _np2r,
-)
-from rpy2.robjects import (
-    pandas2ri as _pd2r,
-)
-from rpy2.robjects import (
-    r as _R,
-)
+
+_logger = _logging.getLogger("grasp.analyzers._Rcode.r2py_models")
+
+try:  # rpy2 became an optional extra in 0.10 (Phase 3).
+    import rpy2.robjects as _ro
+    from rpy2.robjects import globalenv as _genv
+    from rpy2.robjects import numpy2ri as _np2r
+    from rpy2.robjects import pandas2ri as _pd2r
+    from rpy2.robjects import r as _R
+
+    _HAS_RPY2 = True
+    _IMPORT_ERROR: Exception | None = None
+except Exception as _rpy2_err:  # pragma: no cover - exercised via the [r] extra
+    _ro = None  # type: ignore[assignment]
+    _genv = None  # type: ignore[assignment]
+    _np2r = None  # type: ignore[assignment]
+    _pd2r = None  # type: ignore[assignment]
+    _R = None  # type: ignore[assignment]
+    _HAS_RPY2 = False
+    _IMPORT_ERROR = _rpy2_err
+
+
+def _require_rpy2() -> None:
+    """Raise a clear error when the R backend is requested without rpy2."""
+
+    if not _HAS_RPY2:  # pragma: no cover - exercised via the [r] extra
+        raise ModuleNotFoundError(
+            "The R backend requires rpy2. Install the optional extra with "
+            "`pip install grasp[r]` to enable it."
+        ) from _IMPORT_ERROR
 
 
 class GaussianMixtureModel:
@@ -36,6 +57,7 @@ class GaussianMixtureModel:
 
     def __init__(self, r_model, predictions=None):
         """The Constructor"""
+        _require_rpy2()
         self.rmodel = r_model
         self.model = _listvector_to_dict(r_model)
         self.classification = (
@@ -172,6 +194,7 @@ Predicted : {self._predicted}
 
         from .r_check import check_packages
 
+        _require_rpy2()
         check_packages("mclust")
         _np2r.activate()
         code = os.path.join(_RSF, "gaussian_mixture.R")
@@ -198,10 +221,11 @@ Predicted : {self._predicted}
             The name of the file to save the model to. The extention can be
             omitted, as it will be attached to then filename
         """
+        _require_rpy2()
         if ".rds" not in filename:
             filename += ".rds"
         _ro.r("saveRDS")(self.rmodel, file=filename)
-        print(f"Model saved to {filename}")
+        _logger.info("Model saved to %s", filename)
 
     @classmethod
     def load_model(cls, filename):
@@ -214,6 +238,7 @@ Predicted : {self._predicted}
             The name of the file to load the model from. The extention can be
             omitted, as it will be attached to then filename
         """
+        _require_rpy2()
         if ".rds" not in filename:
             filename += ".rds"
         rmodel = _ro.r("readRDS")(filename)
@@ -250,6 +275,15 @@ class KFoldGMM:
         r_result : rpy2.robjects.ListVector or dict
             The result returned by the R KFoldGMM function.
         """
+        _require_rpy2()
+        _warnings.warn(
+            "The R `KFoldGMM` wrapper is deprecated; the R routine computes "
+            "an incorrect CV log-likelihood (see `# FIXME: incorrect CV score` "
+            "in gaussian_mixture.R). Use the Python port "
+            "`grasp.analyzers.backends._python.KFoldGMM` instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         self.rmodel = rmodel
         self.model = _listvector_to_dict(rmodel)
 
@@ -328,6 +362,7 @@ class RegressionModel:
     def __init__(self, r_model=None, kind: str = ""):
         """The Constructor"""
         if r_model is not None:
+            _require_rpy2()
             self.rmodel = r_model
             self.model = _listvector_to_dict(r_model)
             self._model_kind = kind if kind != "" else self.model["kind"]
@@ -376,10 +411,11 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
             The name of the file to save the model to. The extention can be
             omitted, as it will be attached to then filename
         """
+        _require_rpy2()
         if ".rds" not in filename:
             filename += ".rds"
         _ro.r("saveRDS")(self.rmodel, file=filename)
-        print(f"Model saved to {filename}")
+        _logger.info("Model saved to %s", filename)
 
     @classmethod
     def load_model(cls, filename):
@@ -392,6 +428,7 @@ Python wrapper for R Levenberg-Marquardt Nonlinear
             The name of the file to load the model from. The extention can be
             omitted, as it will be attached to then filename
         """
+        _require_rpy2()
         if ".rds" not in filename:
             filename += ".rds"
         rmodel = _ro.r("readRDS")(filename)
@@ -489,6 +526,7 @@ def _listvector_to_dict(r_listvector):
     """
     Recursively converts an R ListVector (from rpy2) to a nested Python dictionary.
     """
+    _require_rpy2()
     py_dict = {}
     for key, value in r_listvector.items():
         # Handle simple types

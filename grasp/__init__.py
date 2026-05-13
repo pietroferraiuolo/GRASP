@@ -53,20 +53,31 @@ from .__version__ import (
 logger = _logging.getLogger("grasp")
 logger.addHandler(_logging.NullHandler())
 
-from . import analyzers, core, plots, stats
+from . import analyzers, core, plots, stats, utils
 from ._utility.base_classes import BaseFormula
 from ._utility.cluster import Cluster, available_clusters
 from ._utility.sample import GcSample, Sample
 from .analyzers import calculus
 from .analyzers._Rcode.r2py_models import (
     GaussianMixtureModel,
+    PyRegressionModel,
     RegressionModel,
+)
+from .analyzers.backends._python import (
+    GaussianMixturePython,
+    KFoldGMMResult,
+    PyFitResult,
+    fit_distribution_python,
+    gaussian_mixture_model_python,
+    kfold_gmm_python,
+    linear_regression_python,
 )
 from .analyzers.mcluster import docs as mcluster_docs
 from .analyzers.mcluster import mcluster_run
 from .formulary import Formulary, load_base_formulary
 from .gaia._zero_point import zero_point_correction
 from .gaia.query import GaiaQuery, available_tables
+from .utils.rng import default_rng
 
 osu = core.osutils
 load_data = osu.load_data
@@ -117,6 +128,14 @@ __all__ = [
     "calculus",
     "RegressionModel",
     "GaussianMixtureModel",
+    "PyRegressionModel",
+    "PyFitResult",
+    "GaussianMixturePython",
+    "KFoldGMMResult",
+    "fit_distribution_python",
+    "gaussian_mixture_model_python",
+    "kfold_gmm_python",
+    "linear_regression_python",
     "BaseFormula",
     "Cluster",
     "Formulary",
@@ -127,6 +146,8 @@ __all__ = [
     "plots",
     "analyzers",
     "core",
+    "utils",
+    "default_rng",
     "load_data",
     "osu",
     "gpaths",

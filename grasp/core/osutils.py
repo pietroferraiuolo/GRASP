@@ -82,7 +82,6 @@ def load_data(
     Load data as a QTable instead of a Sample:
         >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
-    tn = kwargs.get('tn')
     if tn is not None:
         file_name = (
             ("query_data" + file_format) if filepath is None else (filepath + file_format)
