@@ -1,7 +1,9 @@
 import unittest
+
 import numpy as np
 import pandas as pd
 from astropy.table import Table
+
 from grasp import plots as gplt
 from grasp.stats import fit_distribution as regression
 

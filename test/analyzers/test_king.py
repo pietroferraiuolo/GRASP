@@ -1,5 +1,7 @@
 import unittest
+
 from grasp.analyzers.king import king_integrator
+
 
 class TestKingFunctions(unittest.TestCase):
 

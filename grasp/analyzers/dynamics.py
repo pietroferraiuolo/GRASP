@@ -14,8 +14,8 @@ Examples
 
 """
 
-import numpy as np
 import astropy.units as u
+import numpy as np
 
 
 def velocity_conversion(mu, gc_distance, mu_error=0, gc_distance_error=0):

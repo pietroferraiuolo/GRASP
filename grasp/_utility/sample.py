@@ -18,12 +18,12 @@ compact object which has everything and from which quantities can be computed
 easily, while behaving as a QTable.
 """
 
-import pandas as _pd
-from astropy import units as _u
-from grasp._utility.cluster import Cluster as _Cluster
-from astropy.table import QTable as _QTable, Table as _Table
-from .base_classes import BaseSample as _BaseSample
+from astropy.table import QTable as _QTable
+
 from grasp import types as _gt
+from grasp._utility.cluster import Cluster as _Cluster
+
+from .base_classes import BaseSample as _BaseSample
 
 
 class Sample(_BaseSample):
@@ -93,7 +93,7 @@ class Sample(_BaseSample):
             new_sample._merge_info = merged[[col_to_carry, "_merge"]]
             new_sample.drop_columns(["_merge"])
             return new_sample
-    
+
     def dropna(self, inplace: bool = True) -> None | _gt.TabularData:
         """
         Drops rows with NaN values from the sample data.
@@ -115,7 +115,7 @@ class Sample(_BaseSample):
             df = (self.copy()).to_pandas()
             df.dropna(inplace=True)
             return Sample(_QTable.from_pandas(df))
-    
+
 
     def apply_conditions(
         self, conditions: str | list[str] | dict[str, str], inplace: bool = False
@@ -165,9 +165,9 @@ class Sample(_BaseSample):
         from tabulate import tabulate
 
         if self.is_simulation:
-            gctxt = f"""Simulated data sample"""
+            gctxt = """Simulated data sample"""
         else:
-            gctxt = f"""Query data sample retrieved from Gaia"""
+            gctxt = """Query data sample retrieved from Gaia"""
         stxt = "\n"  # "\nData Columns:\n"
         names: list[str] = [name.lower() for name in self.colnames]
         max_len: int = len(max(names, key=len))
@@ -223,7 +223,7 @@ class GcSample(_BaseSample):
     def __repr__(self):
         """The representation"""
         return self.__get_repr()
-    
+
     def join(
         self, other: _gt.TabularData, keep: str = "both", inplace: bool = False
     ) -> _gt.TabularData:
@@ -259,8 +259,8 @@ class GcSample(_BaseSample):
             new_sample._merge_info = merged[[col_to_carry, "_merge"]]
             new_sample.drop_columns(["_merge"])
             return new_sample
-            
-    
+
+
     def update_gc_params(self, **kwargs: dict[str, _gt.Any]) -> None:
         """
         Updates the parameters of the cluster object.
@@ -276,7 +276,7 @@ class GcSample(_BaseSample):
             if hasattr(self.gc, key):
                 setattr(self.gc, key, kwargs[key])
             else:
-                if not self.gc.id == "UntrackedData":
+                if self.gc.id != "UntrackedData":
                     text = self.__get_repr()
                     text = text.split("\n")[5:]
                     ptxt = "\n".join(text)
@@ -357,7 +357,7 @@ class GcSample(_BaseSample):
         from tabulate import tabulate
 
         if self.is_simulation:
-            gctxt = f"""Simulated data sample"""
+            gctxt = """Simulated data sample"""
         elif self.gc.id == "UntrackedData":
             if self.gc.ra is None or self.gc.dec is None:
                 self.gc.ra = (self['ra'].max() - self['ra'].min())/2

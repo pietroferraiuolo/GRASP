@@ -14,11 +14,14 @@ Examples
 
 """
 
-import os as _os
 import datetime as _dt
-from typing import Any as _Any, Optional as _opt
-from grasp.core import folder_paths as _fn
+import os as _os
+from typing import Any as _Any
+from typing import Optional as _opt
+
 from astropy.table import QTable as _QTable
+
+from grasp.core import folder_paths as _fn
 
 datapath = _fn.BASE_DATA_PATH
 querypath = _fn.QUERY_DATA_FOLDER
@@ -79,7 +82,7 @@ def load_data(
     Load data as a QTable instead of a Sample:
         >>> data = load_data(tn="20240101_123456", as_sample=False)
     """
-    tn = kwargs.get('tn', None)
+    tn = kwargs.get('tn')
     if tn is not None:
         file_name = (
             ("query_data" + file_format) if filepath is None else (filepath + file_format)
@@ -90,9 +93,9 @@ def load_data(
         file = filepath
     data = _QTable.read(file, format=data_format)
     if as_sample:
-        from grasp._utility.sample import Sample, GcSample
+        from grasp._utility.sample import GcSample, Sample
 
-        if file_format == ".fits" and "OBJECT" in data.meta.keys():
+        if file_format == ".fits" and "OBJECT" in data.meta:
             gc = data.meta["OBJECT"]
             if gc == "UNDEF":
                 gc = "UntrackedData"
@@ -104,10 +107,7 @@ def load_data(
                 gc = Cluster(gc)
             except Exception:
                 gc = "UntrackedData"
-        if gc == "UntrackedData":
-            data = Sample(data)
-        else:
-            data = GcSample(data, gc=gc)
+        data = Sample(data) if gc == "UntrackedData" else GcSample(data, gc=gc)
     return data
 
 

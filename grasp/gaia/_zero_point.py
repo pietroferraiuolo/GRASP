@@ -1,5 +1,5 @@
 """
-Author(s) 
+Author(s)
 ---------
 - Pietro Ferraiuolo : written in 2024
 
@@ -9,6 +9,7 @@ Description
 
 from numpy import nan_to_num
 from zero_point import zpt as _zpt
+
 from grasp import types as _t
 
 

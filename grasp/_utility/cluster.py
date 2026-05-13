@@ -24,18 +24,27 @@ Now we can call methods to read the parameters
 8.82
 """
 
+import logging
+import os
+import shutil
+
 import astropy.units as u
-from astropy.table import Table
 import matplotlib.pyplot as plt
-import os, shutil, pandas as pd, numpy as np
-from grasp.plots import label_font, title_font
+import numpy as np
+import pandas as pd
+from astropy.table import Table
+
 from grasp import types as _ty
 from grasp.core.folder_paths import (
+    CATALOG_FILE,
     CLUSTER_DATA_FOLDER,
     CLUSTER_MODEL_FOLDER,
-    CATALOG_FILE,
     UNTRACKED_DATA_FOLDER,
+    ensure_data_dir,
 )
+from grasp.plots import label_font, title_font
+
+_logger = logging.getLogger("grasp._utility.cluster")
 
 
 class Cluster:
@@ -69,11 +78,11 @@ class Cluster:
     def __init__(self, name: _ty.Optional[str] = None, **params: dict[str, _ty.Any]):
         """The constructor"""
         if name == "UntrackedData" or name is None:
-            print("Not a Cluster: no model available")
+            _logger.debug("Not a Cluster: no model available")
             self.data_path: str = UNTRACKED_DATA_FOLDER
             self.id: str = "UntrackedData"
-            self.ra: _ty.Optional[float|_ty.Quantity] = params.get("ra", None)
-            self.dec: _ty.Optional[float|_ty.Quantity] = params.get("dec", None)
+            self.ra: _ty.Optional[float|_ty.Quantity] = params.get("ra")
+            self.dec: _ty.Optional[float|_ty.Quantity] = params.get("dec")
             self.model: _ty.Optional[Table | pd.DataFrame] = None
         else:
             self.id = name.upper()
@@ -91,7 +100,7 @@ class Cluster:
             # r_t = r_c * 10**logc. See Harris, W.E. 1996, AJ, 112, 1487
             # (catalog rev. 2010 December).
             self.rt: _ty.Quantity | float = self.rc * 10**self.logc
-            self.cflag: bool = True if parms.loc["collapsed"] == "Y" else False
+            self.cflag: bool = parms.loc["collapsed"] == "Y"
             self.model: _ty.Optional[Table | pd.DataFrame] = self._load_king_model()
 
     def __str__(self):
@@ -119,11 +128,11 @@ class Cluster:
             scale : scale of the axes, default linear.
             grid  : grid on the plot
         """
-        scale: _ty.Optional[str] = kwargs.get("scale", None)
-        xscale: _ty.Optional[str] = kwargs.get("xscale", None)
-        yscale: _ty.Optional[str] = kwargs.get("yscale", None)
-        xlim: _ty.Optional[tuple[float]] = kwargs.get("xlim", None)
-        ylim: _ty.Optional[tuple[float]] = kwargs.get("ylim", None)
+        scale: _ty.Optional[str] = kwargs.get("scale")
+        xscale: _ty.Optional[str] = kwargs.get("xscale")
+        yscale: _ty.Optional[str] = kwargs.get("yscale")
+        xlim: _ty.Optional[tuple[float]] = kwargs.get("xlim")
+        ylim: _ty.Optional[tuple[float]] = kwargs.get("ylim")
         c: str = kwargs.get("color", "black")
         grid: bool = kwargs.get("grid", False)
         fig = plt.figure(figsize=(8, 6))
@@ -167,7 +176,7 @@ class Cluster:
 
         Returns
         -------
-        cat_row : Series 
+        cat_row : Series
             Pandas Series with all the necessary paramenters to ilitialize the Cluster Class.
         """
         catalog = pd.read_excel(CATALOG_FILE, index_col=0)
@@ -197,10 +206,11 @@ class Cluster:
                 model["w"] = np.loadtxt(file, skiprows=1, usecols=2)
                 model["rho"] = np.loadtxt(file, skiprows=1, usecols=3)
             except Exception:
-                import io, re
+                import io
+                import re
 
                 file = os.path.join(CLUSTER_MODEL_FOLDER(self.id), "SM_king.txt")
-                with open(file, "r") as f:
+                with open(file) as f:
                     content = f.read()
                 content_fixed = re.sub(r"(?<=[0-9])-(?=\d)", r" -", content)
                 model["xi"] = np.loadtxt(
@@ -215,11 +225,12 @@ class Cluster:
         except FileNotFoundError:
             from grasp.analyzers.king import king_integrator
 
-            print(
-                f"WARNING: no king model file found for '{self.id}'. Performing the Single-Mass King model integration."
+            _logger.warning(
+                "No king model file found for '%s'. "
+                "Performing the Single-Mass King model integration.",
+                self.id,
             )
-            if not os.path.exists(self.model_path):
-                os.mkdir(self.model_path)
+            ensure_data_dir(self.model_path)
             result: str | list[str] = king_integrator(self.w0, output="profile")
             if isinstance(result, list):
                 result = result[0]  # Use the first file if result is a list
@@ -269,7 +280,7 @@ def available_clusters(out:bool = False) -> _ty.Optional[_ty.DataFrame]:
     Prints all the available clusters present tin the Harris Catalog 2010
     edition.
     The clusters are stored in the grasp/sysdata/_Catalogue.xlsx file.
-    
+
     Parameters
     ----------
     out : bool, optional
