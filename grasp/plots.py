@@ -182,7 +182,7 @@ def doubleHistScatter(
             label=f"$\\mu$={reg_x.coeffs[1]:.3f}\n$\\sigma^2$={reg_x.coeffs[2]:.3f}",
         )
         ax_histy.plot(
-            reg_y.x,
+            reg_y.y,
             reg_y.x,
             color=colory,
             label=f"$\\mu$={reg_y.coeffs[1]:.3f}\n$\\sigma^2$={reg_y.coeffs[2]:.3f}",
@@ -250,7 +250,7 @@ def colorMagnitude(
         g = sample["phot_g_mean_mag"].value
         b_r = sample["bp_rp"].value
         teff_gspphot = sample["teff_gspphot"].value
-    elif g is None or b_r is None or teff_gspphot is not None:
+    elif g is None or b_r is None or teff_gspphot is None:
         raise ValueError("You must provide a sample or the data fields.")
     _plt.scatter(b_r, g, c=teff_gspphot, alpha=a, cmap=cmap)
     _plt.colorbar(label=r"$T_{eff}$")
@@ -467,7 +467,7 @@ def histogram(
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
     if scale == "log":
-        xlabel = "log() " + xlabel + " )"
+        xlabel = f"log( {xlabel} )" if xlabel else "log( x )"
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
             xlim = kwargs["xlim"]
@@ -799,8 +799,8 @@ def regressionPlot(
 
     """
     rm = _get_regression_model(regression_model, y_data, x_data, f_type)
-    D = _np.linalg.norm([rm.x.min(), rm.x.max()]) * 0.02
-    xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max()))
+    D = (rm.x.max() - rm.x.min()) * 0.02
+    xlim = kwargs.get("xlim", (rm.x.min() - D, rm.x.max() + D))
     rs = _osu.get_kwargs(("rsize", "rs"), 2.5, kwargs)
     ps = _osu.get_kwargs(("size", "s"), 2.5, kwargs)
     fsize = kwargs.get("figsize", default_figure_size)

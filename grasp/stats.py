@@ -14,6 +14,7 @@ of the statistical analysis is done through R scripts.
 """
 
 import os as _os
+import warnings as _warnings
 import numpy as _np
 import time as _time
 import pandas as _pd
@@ -293,8 +294,11 @@ def fit_distribution(
     regression_code = _os.path.join(_RSF, "regression.R")
     _R(f'source("{regression_code}")')
     if method == "linear":
-        DeprecationWarning(
-            "The 'linear' method in `fit_distribution is deprecated. Use `grasp.stats.fit_data_points(..., method='linear')` instead."
+        _warnings.warn(
+            "The 'linear' method in `fit_distribution` is deprecated. Use "
+            "`grasp.stats.fit_data_points(..., method='linear')` instead.",
+            DeprecationWarning,
+            stacklevel=2,
         )
         _pd2r.activate()
         reg_func = _genv["linear_regression"]

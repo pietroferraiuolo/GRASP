@@ -1,6 +1,10 @@
 include README.md
 include LICENSE
+include CHANGELOG.md
+include CITATION.cff
 include requirements.txt
-include grasp/sysdata/_Catalogue.xml
+include pyproject.toml
+include grasp/py.typed
+include grasp/sysdata/_Catalogue.xlsx
 include grasp/sysdata/base.frm
-recursive-include my_package *
+recursive-include grasp/analyzers/_Rcode *.R
