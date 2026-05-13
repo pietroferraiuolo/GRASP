@@ -61,6 +61,16 @@ KFoldGMM <- function(data, K, G = 2, ...) {
   #' @param K Number of folds (default: 5)
   #' @param ... Additional arguments passed to Mclust
   #' @return List with average log-likelihood, BIC, and per-fold results
+  #'
+  # FIXME: incorrect CV score.
+  # The per-fold "log-likelihood" computed below is
+  #     sum(log(rowSums(pred$z * fit$parameters$pro)))
+  # which mixes ``pred$z`` (already a posterior membership distribution) with
+  # the prior weights ``pro``. The correct marginal log-likelihood is
+  #     sum_i log sum_k pi_k * N(x_i | mu_k, Sigma_k)
+  # i.e. ``sklearn.mixture.GaussianMixture.score(test_data) * n_test``.
+  # The Python backend (grasp.analyzers.backends._python.KFoldGMM) does this
+  # correctly; this R implementation is kept for parity testing only.
   n <- nrow(data)
   # Shuffle the data along the instance axis
   data <- data[sample(n), , drop = FALSE]
@@ -79,7 +89,8 @@ KFoldGMM <- function(data, K, G = 2, ...) {
     fit$n_test <- nrow(test_data)
     # Predict on test set
     pred <- predict(fit, test_data)
-    # Log-likelihood of test set under fitted model
+    # FIXME: see header. This is *not* the test-set log-likelihood; treat
+    # the returned mean_loglik with caution and prefer the Python backend.
     logliks[k] <- sum(log(rowSums(pred$z * fit$parameters$pro)))
     bics[k] <- fit$bic
     models[[k]] <- fit

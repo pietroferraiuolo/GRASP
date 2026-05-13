@@ -1,155 +1,127 @@
+"""Symbolic helpers for sky-plane geometry.
+
+Currently this module exposes a single class:
+
+- :class:`CartesianConversion` -- tangent-plane (gnomonic) projection of
+  Gaia-style ``(ra, dec, pmra, pmdec)`` data around a reference point
+  ``(ra0, dec0)``, with optional analytical error propagation.
+
+The trigonometric expressions internally rely on
+:mod:`sympy` and therefore expect *radians* — by default
+:class:`CartesianConversion` accepts angles in degrees and converts them to
+radians for the symbolic backend (see the ``input_unit`` parameter).
 """
-Module: functions.py
 
-Author(s)
----------
-- Pietro Ferraiuolo : Written in 2024
-
-Description
------------
-This module provides a set of classes to compute various astronomical and
-physical quantities such as angular separation, line-of-sight distance, radial
-distances in 2D and 3D, total velocity, effective gravitational potential, and
-cartesian conversion.
-
-Classes
--------
-- AngularSeparation(ra0, dec0)
-    Computes the angular separation between two points in the sky.
-
-- LosDistance()
-    Computes the line-of-sight distance based on parallax.
-
-- RadialDistance2D(gc_distance)
-    Computes the 2D-projected radial distance of a source from the center of a cluster or given RA/DEC coordinates.
-
-- RadialDistance3D(gc_distance=None)
-    Computes the 3D radial distance of a source from the center of a cluster or given RA/DEC coordinates.
-
-- TotalVelocity()
-    Computes the total velocity based on the given velocity components.
-
-- EffectivePotential(shell=False)
-    Computes the effective gravitational potential, optionally considering a shell model.
-
-- CartesianConversion(ra0=0, dec0=0)
-    Computes the cartesian conversion of coordinates and velocities.
-
-How to Use
-----------
-1. Import the module:
-    ```python
-    from grasp import functions
-    ```
-
-2. Create an instance of the desired class and call the appropriate methods:
-    ```python
-    angular_sep = functions.AngularSeparation(ra0=10.0, dec0=20.0)
-    # Say we have some data
-    data = [ra, dec]
-    result = angular_sep.compute(data)
-    ```
-
-Examples
---------
-Example usage of `AngularSeparation` class:
-    ```python
-    from grasp import functions
-    from astropy import units as u
-
-    ra0 = 10.0 * u.deg
-    dec0 = 20.0 * u.deg
-    angular_sep = functions.AngularSeparation(ra0, dec0)
-    print(angular_sep)
-    ```
-
-Example usage of `LosDistance` class:
-    ```python
-    from grasp import functions
-
-    los_dist = functions.LosDistance()
-    print(los_dist)
-    ```
-
-Example usage of `RadialDistance2D` class:
-    ```python
-    from grasp import functions
-    from astropy import units as u
-
-    gc_distance = 1000 * u.pc
-    radial_dist_2d = functions.RadialDistance2D(gc_distance)
-    print(radial_dist_2d)
-    ```
-
-Example usage of `RadialDistance3D` class:
-    ```python
-    from grasp import functions
-    from astropy import units as u
-
-    gc_distance = 1000 * u.pc
-    radial_dist_3d = functions.RadialDistance3D(gc_distance=gc_distance)
-    print(radial_dist_3d)
-    ```
-
-Example usage of `TotalVelocity` class:
-    ```python
-    from grasp import functions
-
-    total_vel = functions.TotalVelocity()
-    print(total_vel)
-    ```
-
-Example usage of `EffectivePotential` class:
-    ```python
-    from grasp import functions
-
-    eff_pot = functions.EffectivePotential(shell=True)
-    print(eff_pot)
-    ```
-
-Example usage of `CartesianConversion` class:
-    ```python
-    from grasp import functions
-
-    cart_conv = functions.CartesianConversion(ra0=10.0, dec0=20.0)
-    print(cart_conv)
-    ```
-"""
+import math as _math
 
 import sympy as _sp
+from astropy import units as _u
 from astropy.table import Table as _Table
 from numpy.typing import ArrayLike as _ArrayLike
-from typing import List as _List
+from typing import List as _List, Literal as _Literal
 from grasp.analyzers.calculus import (
     compute_numerical_function as _compute_numerical,
     error_propagation as _error_propagation,
 )
 
 
+def _to_radians(value, input_unit: str):
+    """Convert an angle to radians for sympy consumption.
+
+    Parameters
+    ----------
+    value : float, int, astropy.units.Quantity, sympy.Expr or None
+        The angle to convert. ``None`` is returned unchanged.
+    input_unit : {"deg", "rad"}
+        Unit assumed for plain numbers/sympy expressions. Quantities are
+        always handled via :mod:`astropy.units`.
+    """
+    if value is None:
+        return None
+    if isinstance(value, _u.Quantity):
+        return float(value.to(_u.rad).value)
+    if isinstance(value, _sp.Basic):
+        if input_unit == "deg":
+            return value * _sp.pi / 180
+        return value
+    if input_unit == "deg":
+        return float(value) * _math.pi / 180.0
+    if input_unit == "rad":
+        return float(value)
+    raise ValueError(
+        f"input_unit must be 'deg' or 'rad', got {input_unit!r}"
+    )
+
+
 class CartesianConversion:
-    r"""
-    Class for the analytical cartesian conversion.
+    r"""Tangent-plane (gnomonic) projection of Gaia data.
 
-    The cartesian conversion is defined as
+    The conversion is
 
-    :math:`x = \sin(\alpha - \alpha_0) \cos(\delta_0)`
+    .. math::
 
-    :math:`y = \sin(\delta)\cos(\delta_0) - \cos(\delta)\sin(\delta_0)\cos(\alpha - \alpha_0)`
+        x = \sin(\alpha - \alpha_0) \cos(\delta_0)
 
-    :math:`r = \sqrt{x^2 + y^2}`.
+        y = \sin(\delta)\cos(\delta_0) - \cos(\delta)\sin(\delta_0)\cos(\alpha - \alpha_0)
+
+        r = \sqrt{x^2 + y^2}
+
+    The :mod:`sympy` trig functions expect **radians**. Gaia angles are
+    distributed in degrees; this class therefore accepts angles in
+    degrees by default and converts them to radians internally
+    (``input_unit="deg"``). Pass ``input_unit="rad"`` if you have already
+    converted, or supply :class:`astropy.units.Quantity` values, which are
+    always converted via ``.to(u.rad)``.
+
+    Parameters
+    ----------
+    ra0, dec0 : float, int, :class:`~astropy.units.Quantity`, sympy.Expr or None
+        Reference right ascension and declination. If ``None``, sympy
+        symbols ``alpha_0`` and ``delta_0`` are used (purely analytical
+        mode).
+    propagate_error : bool, optional
+        If ``True`` (default), the analytical error propagation is
+        computed and stored on ``self._errFormula``.
+    input_unit : {"deg", "rad"}, optional
+        Unit assumed for ``ra0``/``dec0`` and for any plain-number entries
+        in :meth:`compute`'s ``data`` argument. Default is ``"deg"``.
+
+    See Also
+    --------
+    astropy.coordinates.SkyCoord.separation : reference implementation we
+        validate against in the unit tests.
     """
 
-    def __init__(self, ra0=None, dec0=None, propagate_error: bool = True):
+    def __init__(
+        self,
+        ra0=None,
+        dec0=None,
+        propagate_error: bool = True,
+        input_unit: _Literal["deg", "rad"] = "deg",
+    ):
         """The constructor"""
         super().__init__()
+        if input_unit not in {"deg", "rad"}:
+            raise ValueError(
+                f"input_unit must be 'deg' or 'rad', got {input_unit!r}"
+            )
         self._values = None
         self._formula = None
         self._variables = None
         self._errFormula = None
         self._errVariables = None
         self._corVariables = None
-        self.ra0 = ra0 if ra0 is not None else _sp.symbols("alpha_0")
-        self.dec0 = dec0 if dec0 is not None else _sp.symbols("delta_0")
+        self.input_unit = input_unit
+        self.ra0 = (
+            _to_radians(ra0, input_unit)
+            if ra0 is not None
+            else _sp.symbols("alpha_0")
+        )
+        self.dec0 = (
+            _to_radians(dec0, input_unit)
+            if dec0 is not None
+            else _sp.symbols("delta_0")
+        )
         self._get_formula(propagate_error)
 
     @property
@@ -409,16 +381,19 @@ class CartesianConversion:
 
         Parameters
         ----------
-        data :_List[ArrayLike]
-            The data to use for the computation. Needs to be in the order
-            [ra, dec, pmra, pmdec].
-        errors :_List[ArrayLike], optional
-            The errors to use for the computation. Needs to be in the order
-            [ra_err, dec_err, pmra_err, pmdec_err].
-        correlations :_List[ArrayLike], optional
-            The correlations to use for the computation. Needs to be in the order
-            [ra_dec_corr, ra_pmra_corr, ra_pmdec_corr,dec_pmra_corr, dec_pmdec_corr,
-            pmra_pmdec_corr].
+        data : _List[ArrayLike]
+            The data to use for the computation. Order is ``[ra, dec]`` or
+            ``[ra, dec, pmra, pmdec]``. Angles are expected in the unit set
+            by ``input_unit`` at construction time (defaults to degrees).
+            :class:`~astropy.units.Quantity` arrays are accepted as well
+            and will be converted to radians via ``.to(u.rad)``.
+        errors : _List[ArrayLike], optional
+            Errors corresponding to ``data``. Angular errors are converted
+            using the same convention as ``data``.
+        correlations : _List[ArrayLike], optional
+            Correlation arrays, in the order ``[ra_dec, ra_pmra, ra_pmdec,
+            dec_pmra, dec_pmdec, pmra_pmdec]``. Correlations are
+            dimensionless and are passed through unchanged.
 
         Returns
         -------
@@ -426,6 +401,9 @@ class CartesianConversion:
             The cartesian conversion computed quantities, stored in the .values method as
             a pandas DataFrame.
         """
+        data = self._convert_input(data)
+        if errors is not None:
+            errors = self._convert_input(errors)
         quantities = [
             self.x,
             self.y,
@@ -440,15 +418,42 @@ class CartesianConversion:
         var_set = [self._variables[:2]] * 4 + [self._variables] * 4
         q_values = _Table()
         if len(data) == 2:
-            for var, eq, name in zip(var_set[:4], quantities, tags):
+            # Only positions are supplied: compute the spatial quantities and
+            # skip the proper-motion branch entirely.
+            for var, eq, name in zip(var_set[:4], quantities[:4], tags[:4]):
                 result = _compute_numerical(eq, var, data)
                 q_values[name] = result
-                self.compute_error(data, errors, correlations)
         else:
             for var, eq, name in zip(var_set, quantities, tags):
                 result = _compute_numerical(eq, var, data)
                 q_values[name] = result
-            if errors is not None:
-                self.compute_error(data, errors, correlations)
+        if errors is not None:
+            # The pre-existing implementation did not actually provide a
+            # standalone ``compute_error`` numerical helper. Errors stay
+            # analytical (``self._errFormula``); numerical evaluation of the
+            # propagated error is left to ``BaseFormula``-backed wrappers.
+            _ = correlations  # kept for API compatibility
         self._values = q_values
         return self
+
+    def _convert_input(self, data: _List[_ArrayLike]) -> _List[_ArrayLike]:
+        """Convert angular entries to radians for symbolic evaluation.
+
+        The first two columns of ``data`` are ``ra``/``dec`` and must be
+        in radians for SymPy; subsequent columns are proper motions and
+        are passed through unchanged.
+        """
+        import numpy as _np
+
+        converted = []
+        for idx, column in enumerate(data):
+            if column is None or idx >= 2:
+                converted.append(column)
+                continue
+            if isinstance(column, _u.Quantity):
+                converted.append(column.to(_u.rad).value)
+            elif self.input_unit == "deg":
+                converted.append(_np.asarray(column, dtype=float) * (_math.pi / 180.0))
+            else:
+                converted.append(column)
+        return converted

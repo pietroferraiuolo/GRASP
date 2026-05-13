@@ -2,7 +2,7 @@ type: latex
 Angular Separation
 \theta = 2\times\arcsin{\sqrt{\sin^2{\frac{\delta_0-\delta_1}{2}}+\cos{\delta_0}\cos{\delta_1}\sin^2{\frac{\alpha_0-\alpha_1}{2}}}}
 Los Distance
-r_x = 1/\omega
+r_{pc} = \frac{1000}{\varpi_{mas}}
 Radial Distance 2D
 r_{2} = r_{c} \tan{\theta}
 Gc Z Coordinate

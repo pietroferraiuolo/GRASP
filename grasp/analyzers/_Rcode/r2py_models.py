@@ -540,10 +540,10 @@ $x_0$   = {_format_number(x0)}
 $dx$   = {_format_number(dx)}"""
 
     elif kind == "exponential":
-        A, lmbda = coeffs
-        label = f"""Exponential
+        A, b = coeffs
+        label = f"""Exponential ($A\\,e^{{-b\\,x}}$)
 $A$   = {_format_number(A)}
-$\\lambda$ = {_format_number(lmbda)}"""
+$b$   = {_format_number(b)}"""
 
     elif kind == "king":
         A, ve, sigma = coeffs
@@ -581,7 +581,7 @@ $n$   = {_format_number(n)}"""
         A, mu, sigma = coeffs
         label = f"""Lognormal
 $A$   = {_format_number(A)}
-$\mu$   = {_format_number(mu)}
+$\\mu$   = {_format_number(mu)}
 $\\sigma$  = {_format_number(sigma)}"""
 
     elif kind == "poisson":
