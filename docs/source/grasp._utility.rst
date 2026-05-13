@@ -11,15 +11,15 @@ grasp._utility.cluster module
    :members:
    :undoc-members:
    :show-inheritance:
-   
-grasp._utility.base_formula module
+
+grasp._utility.base_classes module
 ----------------------------------
 
-.. automodule:: grasp._utility.base_formula
+.. automodule:: grasp._utility.base_classes
    :members:
    :undoc-members:
    :show-inheritance:
-   
+
 grasp._utility.sample module
 ----------------------------
 

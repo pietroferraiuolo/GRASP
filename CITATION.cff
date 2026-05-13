@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use GRASP in academic work, please cite it as below."
+title: "GRASP: Globular clusteR Astrometry and Photometry Software"
+type: software
+version: "0.9.3"
+date-released: 2024-05-01
+license: MIT
+repository-code: "https://github.com/pietroferraiuolo/GRASP"
+url: "https://github.com/pietroferraiuolo/GRASP"
+authors:
+  - family-names: Ferraiuolo
+    given-names: Pietro
+    email: pietro.ferraiuolo@inaf.it
+    affiliation: "INAF -- Osservatorio Astronomico di Capodimonte"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # optional
+keywords:
+  - astronomy
+  - astrometry
+  - photometry
+  - globular-clusters
+  - gaia
+  - python
+preferred-citation:
+  type: software
+  title: "GRASP: Globular clusteR Astrometry and Photometry Software"
+  authors:
+    - family-names: Ferraiuolo
+      given-names: Pietro
+  version: "0.9.3"
+  year: 2024
+  url: "https://github.com/pietroferraiuolo/GRASP"
