@@ -1,57 +1,17 @@
 grasp package
 =============
 
-Subpackages
------------
-
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
 
    grasp.analyzers
    grasp._utility
-
-Submodules
-----------
-
-grasp._cluster module
----------------------
-
-.. automodule:: grasp._cluster
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-grasp.functions module
-----------------------
-
-.. automodule:: grasp.functions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-grasp.plots module
-------------------
-
-.. automodule:: grasp.plots
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-grasp.gaia.query module
--------------------
-
-.. automodule:: grasp.gaia.query
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   
-grasp.statistics module
------------------------
-
-.. automodule:: grasp.statistics
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   grasp.utils
+   grasp.functions
+   grasp.formulary
+   grasp.gaia
+   grasp.plots
+   grasp.stats
 
 Module contents
 ---------------

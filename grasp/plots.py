@@ -136,9 +136,12 @@ def doubleHistScatter(
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
 
-        _, n_bins = knuth_bin_width(x, return_bins=True)
+        _, n_bins_x = knuth_bin_width(x, return_bins=True)
+        _, n_bins_y = knuth_bin_width(y, return_bins=True)
     elif n_bins == "detailed":
-        n_bins = int(1.5 * _np.sqrt(len(x)))
+        n_bins_x = n_bins_y = int(1.5 * _np.sqrt(len(x)))
+    else:
+        n_bins_x = n_bins_y = n_bins
     fig = _plt.figure(figsize=fsize)
     gs = fig.add_gridspec(
         nrows=2,
@@ -165,9 +168,9 @@ def doubleHistScatter(
     ax_histy.set_xlabel("Counts\n")
     ax.set_xlabel(xlabel, fontdict=label_font)
     ax.set_ylabel(ylabel, fontdict=label_font)
-    hx = ax_histx.hist(x, bins=n_bins, color=colorx, alpha=0.6)
+    hx = ax_histx.hist(x, bins=n_bins_x, color=colorx, alpha=0.6)
     hy = ax_histy.hist(
-        y, bins=n_bins, orientation="horizontal", color=colory, alpha=0.6
+        y, bins=n_bins_y, orientation="horizontal", color=colory, alpha=0.6
     )
     _plt.suptitle(title, size=20, style="italic", family="cursive")
     ax_histx.set_xlim(xlim)
@@ -178,8 +181,8 @@ def doubleHistScatter(
     ax_histy.set_xticks(_np.arange(hy[0].max(), hy[0].max() + 1, 1))
     ax_histx.set_yticks(_np.arange(hx[0].max(), hx[0].max() + 1, 1))
     if kde:
-        reg_x = _kde_estimator(data=x, bins=n_bins, method=kde_kind)
-        reg_y = _kde_estimator(data=y, bins=n_bins, method=kde_kind)
+        reg_x = _kde_estimator(data=x, bins=n_bins_x, method=kde_kind)
+        reg_y = _kde_estimator(data=y, bins=n_bins_y, method=kde_kind)
         ax_histx.plot(
             reg_x.x,
             reg_x.y,
