@@ -474,14 +474,25 @@ class Formulary:
 
 
 def load_base_formulary():
-    """
-    Load the base formulary file.
+    """Load the bundled base formulary.
+
+    Notes
+    -----
+    The shipped formulary uses Gaia-friendly units. In particular the
+    "Los Distance" entry assumes ``ϖ`` in milliarcseconds and yields the
+    line-of-sight distance in parsecs:
+
+    .. math:: r_\\mathrm{pc} = \\dfrac{1000}{\\varpi_\\mathrm{mas}}\\,.
+
+    If instead you have ``ϖ`` already in arcseconds, the equivalent
+    relation is :math:`r_\\mathrm{pc} = 1 / \\varpi_\\mathrm{arcsec}`. The
+    Gaia DR3 source catalogue distributes parallaxes in mas, which is
+    why the default base formulary uses the mas convention.
 
     Returns
     -------
-    formulary : Formulary object
+    formulary : Formulary
         The formulary object containing the base formulary.
-
     """
     formulary = Formulary()
     formulary.load_formulary(_fbf)

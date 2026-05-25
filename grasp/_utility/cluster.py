@@ -39,23 +39,31 @@ from grasp.core.folder_paths import (
 
 
 class Cluster:
-    """
-    Class for the cluster parameter loading.
+    """Cluster parameter container backed by the Harris catalogue.
 
-    Upon initializing, it is loaded with the specified cluster's parameters, ta
-    ken from the Harris Catalogue 2010 Edition.
+    On initialisation the catalogue row matching ``name`` is loaded from the
+    bundled `_Catalogue.xlsx`, which mirrors the Harris (1996, 2010 edition)
+    Milky Way globular cluster catalogue.
 
-    Methods
-    -------
-    _loadClusterParameters(self, name) : function
-        Loads the desired cluster's parameters
+    Notes
+    -----
+    Following the Harris 1996/2010 convention,
 
-    How to Use
+    .. math:: c \\equiv \\log_{10}(r_t / r_c)
+
+    so the tidal radius stored on this class is computed as
+    ``rt = rc * 10**logc``.
+
+    References
     ----------
-    Initialize the class with a cluster's name. As example
+    Harris, W. E., 1996, AJ, 112, 1487 (catalogue revision December 2010).
+    See https://www.physics.mcmaster.ca/~harris/mwgc.dat for the canonical
+    text version of the catalogue.
 
-    >>> from grasp._cluster import Cluster
-    >>> ngc104 = Cluster('ngc104')
+    Examples
+    --------
+    >>> from grasp._utility.cluster import Cluster
+    >>> ngc104 = Cluster("ngc104")
     """
 
     def __init__(self, name: _ty.Optional[str] = None, **params: dict[str, _ty.Any]):
@@ -79,6 +87,9 @@ class Cluster:
             self.rh: _ty.Quantity | float = parms.loc["rh"] / 60 * u.deg
             self.w0: float = parms.loc["w0"]
             self.logc: float = parms.loc["logc"]
+            # Harris 1996 (2010 edition): c = log10(r_t / r_c), therefore
+            # r_t = r_c * 10**logc. See Harris, W.E. 1996, AJ, 112, 1487
+            # (catalog rev. 2010 December).
             self.rt: _ty.Quantity | float = self.rc * 10**self.logc
             self.cflag: bool = True if parms.loc["collapsed"] == "Y" else False
             self.model: _ty.Optional[Table | pd.DataFrame] = self._load_king_model()

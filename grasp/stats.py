@@ -23,7 +23,8 @@ from astropy.table import Table as _Table
 from astroML.density_estimation import XDGMM
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
 from grasp.analyzers._Rcode import check_packages as _checkRpackages, r2py_models as _rm
-from scipy.optimize import curve_fit as _curve_fit
+from scipy.optimize import curve_fit as _curve_fit, minimize as _minimize
+from scipy.stats import poisson as _scipy_poisson
 import rpy2.robjects as _ro
 from rpy2.robjects import (
     r as _R,
@@ -107,6 +108,17 @@ def kfold_gmm_estimator(
     fitted_model : grasp.KFoldGMM
         The fitted gaussian mixture model and its parameters.
     """
+    _warnings.warn(
+        "`kfold_gmm_estimator` currently relies on the R `KFoldGMM` routine "
+        "whose per-fold log-likelihood is mathematically incorrect (see the "
+        "`# FIXME: incorrect CV score` comment in "
+        "`grasp/analyzers/_Rcode/gaussian_mixture.R`). The Phase 3 Python "
+        "port computes the proper marginal log-likelihood via "
+        "`sklearn.mixture.GaussianMixture.score`. Treat the returned "
+        "`mean_loglik` with caution.",
+        RuntimeWarning,
+        stacklevel=2,
+    )
     _checkRpackages("mclust")
     _np2r.activate()
     code = _os.path.join(_RSF, "gaussian_mixture.R")
@@ -335,6 +347,99 @@ def fit_distribution(
     return model
 
 
+def fit_poisson_mle(
+    counts: _T.Array,
+    *,
+    initial_lambda: _T.Optional[float] = None,
+    method: str = "L-BFGS-B",
+) -> _T.RegressionModels:
+    """Fit a Poisson distribution to integer counts via maximum likelihood.
+
+    This replaces the previous Poisson NLS hack (R ``regression.R``), which
+    treated the histogram bin centres as Poisson "x" values and called
+    ``factorial(x)`` on non-integer midpoints (producing NaNs and biased
+    parameter estimates). The new implementation maximises the genuine
+    Poisson log-likelihood
+
+    .. math:: \\log L(\\lambda; k_i) = \\sum_i \\log\\text{Poisson}(k_i \\mid \\lambda)
+
+    using :func:`scipy.optimize.minimize` against the negative log-likelihood
+    computed with :func:`scipy.stats.poisson.logpmf`.
+
+    Parameters
+    ----------
+    counts : array-like of int
+        The integer count data. Non-integer or negative values raise
+        ``ValueError``.
+    initial_lambda : float, optional
+        Initial value for the rate parameter. Defaults to the sample mean.
+    method : str, optional
+        Optimisation method forwarded to :func:`scipy.optimize.minimize`.
+        Defaults to ``"L-BFGS-B"`` with the bound ``lambda > 0``.
+
+    Returns
+    -------
+    model : :class:`grasp.analyzers._Rcode.r2py_models.PyRegressionModel`
+        A Python regression model wrapper exposing ``coeffs = (A, lambda)``
+        (``A`` is fixed to the sample size so the wrapper formats nicely in
+        :func:`grasp.plots.regressionPlot`).
+
+    See Also
+    --------
+    fit_distribution : kept available as a fallback via the R backend.
+    """
+    counts_arr = _np.asarray(counts)
+    if counts_arr.ndim != 1:
+        raise ValueError("`counts` must be 1-D for a Poisson MLE fit.")
+    if not _np.issubdtype(counts_arr.dtype, _np.integer):
+        if _np.any(counts_arr != _np.round(counts_arr)):
+            raise ValueError(
+                "Poisson MLE requires integer counts; "
+                "got non-integer entries."
+            )
+        counts_arr = counts_arr.astype(int)
+    if _np.any(counts_arr < 0):
+        raise ValueError("Poisson counts must be non-negative.")
+    if counts_arr.size == 0:
+        raise ValueError("`counts` is empty; cannot fit.")
+
+    lam0 = float(initial_lambda) if initial_lambda is not None else float(counts_arr.mean())
+    lam0 = max(lam0, 1e-6)
+
+    def _nll(theta: _np.ndarray) -> float:
+        lam = float(theta[0])
+        if lam <= 0:
+            return _np.inf
+        return -float(_np.sum(_scipy_poisson.logpmf(counts_arr, mu=lam)))
+
+    result = _minimize(
+        _nll,
+        x0=_np.array([lam0]),
+        method=method,
+        bounds=[(1e-12, None)],
+    )
+    if not result.success:
+        _warnings.warn(
+            f"Poisson MLE did not converge: {result.message}",
+            RuntimeWarning,
+            stacklevel=2,
+        )
+    lam_hat = float(result.x[0])
+    n = int(counts_arr.size)
+    x_axis = _np.unique(counts_arr)
+    y_fit = n * _scipy_poisson.pmf(x_axis, mu=lam_hat)
+
+    fit_payload = {
+        "data": counts_arr,
+        "x": x_axis,
+        "y_fit": y_fit,
+        "parameters": _np.array([float(n), lam_hat]),
+        "residuals": _np.array([], dtype=float),
+        "covmat": "unavailable",
+    }
+    return _rm.PyRegressionModel(fit_payload, "poisson")
+
+
 def fit_data_points(
     data: _T.Optional[_T.Array] = None,
     x_data: _T.Optional[_T.Array] = None,
@@ -367,10 +472,10 @@ def fit_data_points(
     > grasp.stats.fit_data(x, y, 'exponential')
     > # The above call is equivalent to doing:
     > def exponential(x, a, b):
-    >     return a * np.exp(b * x)
+    >     return a * np.exp(-b * x)  # decay form, see CHANGELOG
     > grasp.stats.fit_data(x, y, exponential)
     > # or, equivalently
-    > grasp.stats.fit_data(x, y, lambda x, a, b: a * np.exp(b * x))
+    > grasp.stats.fit_data(x, y, lambda x, a, b: a * np.exp(-b * x))
     ```
 
     Parameters
@@ -705,7 +810,7 @@ def _get_function(name: str):  # -> _T.FittingFunc[..., float]:
         "lognormal": lambda x, A, mu, sigma: A
         / (x * sigma * sqrt(2 * pi))
         * exp(-((log(x) - mu) ** 2) / (2 * sigma**2)),
-        "exponential": lambda x, a, l: a * exp(l * x),
+        "exponential": lambda x, a, b: a * exp(-b * x),
         "poisson": lambda x, A, l: A * exp(-l) * l**x / fact(x),
         "maxwell": lambda x, a, sigma: (a / (sigma**3))
         * 4

@@ -83,6 +83,36 @@ _QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
 
 
+def _split_gaia_table(gaia_table: _gt.Optional[_gt.Union[str, list[str]]]) -> tuple[str, str]:
+    """Return ``(schema, table_name)`` for a possibly qualified Gaia table id.
+
+    The Gaia ADQL service exposes tables as ``schema.table`` (``gaiadr3.gaia_source``,
+    ``gaiadr2.gaia_source``, ...). Knowing the schema is necessary to build
+    fully-qualified column references such as ``gaiadr2.gaia_source.ra``.
+
+    Parameters
+    ----------
+    gaia_table : str or list[str] or None
+        The Gaia table name. If a list is passed, the first entry is used for
+        the qualifier (downstream queries only target the primary table).
+        ``None`` defaults to ``"gaiadr3.gaia_source"``.
+
+    Returns
+    -------
+    schema, table_name : tuple[str, str]
+        Schema and table components. If ``gaia_table`` is not qualified the
+        schema defaults to ``"gaiadr3"``.
+    """
+    if gaia_table is None:
+        return "gaiadr3", "gaia_source"
+    if isinstance(gaia_table, (list, tuple)):
+        gaia_table = gaia_table[0]
+    if "." in gaia_table:
+        schema, _, name = gaia_table.partition(".")
+        return schema, name
+    return "gaiadr3", gaia_table
+
+
 def available_tables(key: _gt.Optional[str] = None):
     """
     Prints out the complete list of data tables names present in the Gaia archive.
@@ -194,11 +224,17 @@ class GaiaQuery:
         _Gaia.MAIN_GAIA_TABLE = gaia_table
         _Gaia.ROW_LIMIT = -1
         self._table = gaia_table
+        self._schema, self._table_name = _split_gaia_table(gaia_table)
         self._path = _BDP
         self._fold = None
+        # ``{table}`` is fully-qualified (e.g. ``gaiadr2.gaia_source``); ``ra``
+        # and ``dec`` are referenced without an explicit schema qualifier so
+        # the same template works for any data release. The optional
+        # ``{ra_col}`` / ``{dec_col}`` placeholders kept on the class allow a
+        # qualified form when the caller asks for it.
         self._baseQ = """SELECT {data}
 FROM {table}
-WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRCLE('ICRS',{circle}))=1
+WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
     {cond}"""
         self.last_result = None
         self.last_query = None
@@ -240,22 +276,27 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         ----------
         adql_cmd : str
             The ADQL command to execute.
-            _Hint_: It is higly recommended to use the triple quote \""" to
+            _Hint_: It is highly recommended to use the triple quote ``\"""`` to
             write the command, in order to avoid problems with the
             indentation and the line breaks.
 
-            Example:
-            ```python
-            adql_cmd = '''SELECT source_id, ra, dec
-            FROM gaiadr3.gaia_source
-            WHERE CONTAINS(POINT('ICRS',ra,dec),CIRCLE('ICRS',ra,dec,radius))=1'''
-            ```
+            Example::
 
-            Refer to the
-            <a href=https://www.cosmos.esa.int/web/gaia-users/archive/writing-queries#query_example_1>
-            ESA Cosmos</a> documentation for query examples, and to the
-            <a href=https://ivoa.net/documents/ADQL/20230418/PR-ADQL-2.1-20230418.html#tth_sEc4.2.9>
-            ADQL</a> documentation of syntax and functions.
+                adql_cmd = '''SELECT source_id, ra, dec
+                FROM gaiadr3.gaia_source
+                WHERE CONTAINS(
+                    POINT('ICRS', ra, dec),
+                    CIRCLE('ICRS', 10.0, 20.0, 0.1)
+                ) = 1'''
+
+            Note that the ADQL ``CIRCLE`` geometry function takes
+            ``('frame', ra_center, dec_center, radius)`` (four arguments,
+            see the IVOA `ADQL 2.0
+            <https://ivoa.net/documents/REC/ADQL/ADQL-20081030.html>`_ and
+            `ADQL 2.1 <https://ivoa.net/documents/ADQL/20230418/PR-ADQL-2.1-20230418.html#tth_sEc4.2.9>`_
+            specifications). Refer to the
+            `ESA Cosmos <https://www.cosmos.esa.int/web/gaia-users/archive/writing-queries#query_example_1>`_
+            documentation for further query examples.
         save : bool, optional
             Whether to save the obtained data with its information or not.
             Default is False, meaning the data will not be saved.
@@ -761,10 +802,10 @@ Loading it..."""
         radius: str | _u.Quantity | float,
         data: str | list[str],
         conditions: str | list[str],
+        qualified_coords: bool = True,
     ) -> str:
         """
-        This function writes the query, correctly formatting all the variables
-        in order to be accepted by the GAIA ADQL language.
+        Build the ADQL query string for the currently selected Gaia table.
 
         Parameters
         ----------
@@ -773,17 +814,24 @@ Loading it..."""
         dec : str
             Declination.
         radius : str
-            Scan_Radius.
+            Scan radius.
         data : str
             Data to retrieve.
         conditions : list of str
             Conditions to apply.
+        qualified_coords : bool, optional
+            If ``True`` (default) ``ra`` and ``dec`` inside the ADQL
+            ``CONTAINS(...)`` predicate are emitted as fully-qualified names
+            using the schema parsed from ``gaia_table`` (e.g.
+            ``gaiadr2.gaia_source.ra``). The qualifier matches whatever
+            release the :class:`GaiaQuery` was instanced with; passing
+            ``False`` falls back to bare ``ra,dec`` references (the
+            ``FROM`` alias takes care of resolution).
 
         Returns
         -------
         query : str
             The full string to input the query with.
-
         """
         if isinstance(ra, _u.Quantity):
             ra = ra / _u.deg  # type: ignore
@@ -791,10 +839,22 @@ Loading it..."""
             dec = dec / _u.deg  # type: ignore
         if isinstance(radius, _u.Quantity):
             radius = radius / _u.deg  # type: ignore
-        circle = f"{ra},{dec},{radius:.3f}"
+        circle = f"{ra}, {dec}, {radius:.3f}"
         dat, cond = self._formatCheck(data, conditions)
+        if qualified_coords:
+            qualifier = f"{self._schema}.{self._table_name}"
+            ra_col = f"{qualifier}.ra"
+            dec_col = f"{qualifier}.dec"
+        else:
+            ra_col = "ra"
+            dec_col = "dec"
         query = self._baseQ.format(
-            data=dat, table=self._table, circle=circle, cond=cond
+            data=dat,
+            table=self._table,
+            circle=circle,
+            cond=cond,
+            ra_col=ra_col,
+            dec_col=dec_col,
         )
         self.last_query = query
         return query
