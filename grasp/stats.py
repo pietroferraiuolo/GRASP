@@ -14,24 +14,34 @@ of the statistical analysis is done through R scripts.
 """
 
 import os as _os
-import warnings as _warnings
-import numpy as _np
 import time as _time
+import warnings as _warnings
+
+import numpy as _np
 import pandas as _pd
-from grasp import types as _T
-from astropy.table import Table as _Table
-from astroML.density_estimation import XDGMM
-from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
-from grasp.analyzers._Rcode import check_packages as _checkRpackages, r2py_models as _rm
-from scipy.optimize import curve_fit as _curve_fit, minimize as _minimize
-from scipy.stats import poisson as _scipy_poisson
 import rpy2.robjects as _ro
+from astroML.density_estimation import XDGMM
+from astropy.table import Table as _Table
 from rpy2.robjects import (
-    r as _R,
-    numpy2ri as _np2r,
-    pandas2ri as _pd2r,
     globalenv as _genv,
 )
+from rpy2.robjects import (
+    numpy2ri as _np2r,
+)
+from rpy2.robjects import (
+    pandas2ri as _pd2r,
+)
+from rpy2.robjects import (
+    r as _R,
+)
+from scipy.optimize import curve_fit as _curve_fit
+from scipy.optimize import minimize as _minimize
+from scipy.stats import poisson as _scipy_poisson
+
+from grasp import types as _T
+from grasp.analyzers._Rcode import check_packages as _checkRpackages
+from grasp.analyzers._Rcode import r2py_models as _rm
+from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
 
 
 def XD_estimator(
@@ -556,7 +566,7 @@ def fit_data_points(
                 f"The provided function argument `f` must be either a string or a callable: {type(f)}"
             )
         popt, pcov, infodict, _, _ = _curve_fit(
-            f, x_data, data, full_output=True, *curvefit_args
+            f, x_data, data, *curvefit_args, full_output=True
         )
         y_fit = f(x_data, *popt)
         fitted = {
@@ -647,8 +657,10 @@ def bootstrap_statistic(
     print(f"Mean: {mean:.1f} +{upper-mean:.1f} -{mean-lower:.1f}")
     ```
     """
+    from multiprocessing import Pool as _Pool
+    from multiprocessing import cpu_count as _ncpu
+
     from tqdm import tqdm as _tqdm
-    from multiprocessing import Pool as _Pool, cpu_count as _ncpu
 
     # Input validation
     data = _np.asarray(data)
@@ -747,7 +759,7 @@ def bootstrap_statistic(
             # Handle multidimensional statistics
             uncertainty = _np.zeros_like(original_statistic)
             for idx in _np.ndindex(original_statistic.shape):
-                idx_tuple = idx if len(idx) > 0 else 0
+                idx if len(idx) > 0 else 0
                 stat_at_idx = bootstrap_statistics[(slice(None),) + idx]
                 lower, upper = _np.percentile(
                     stat_at_idx, [lower_percentile, upper_percentile]
@@ -767,10 +779,7 @@ def _bootstrap_helper(args):
     data, indices, statistic_function, func_args, func_kwargs = args
     try:
         # Sample with replacement using the provided indices
-        if data.ndim == 1:
-            bootstrap_sample = data[indices]
-        else:
-            bootstrap_sample = data[indices, :]
+        bootstrap_sample = data[indices] if data.ndim == 1 else data[indices, :]
 
         # Compute the statistic
         return statistic_function(bootstrap_sample, *func_args, **func_kwargs)

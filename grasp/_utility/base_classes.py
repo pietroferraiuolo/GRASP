@@ -9,15 +9,18 @@ Base class for formulas calsses, used in the 'grasp.functions' module.
 """
 
 from abc import ABC
+
 import numpy as _np
-from sympy import Basic as _sb
-from grasp import types as _gt
 from astropy import units as _u
+from sympy import Basic as _sb
+
+from grasp import types as _gt
+
 _QTable = _gt.QTable
 _ArrayLike = _gt.ArrayLike
 
 
-class BaseFormula(ABC):
+class BaseFormula(ABC):  # noqa: B024 - kept as a marker ABC, no abstract members
     """
     Base class for the various formula calsses
     """
@@ -44,8 +47,8 @@ class BaseFormula(ABC):
     def _get_str(self):
         """Return the actual formula as a string"""
         formula = self._formula
-        computed = (True if self._values is not None else False) or (
-            True if self._errors is not None else False
+        computed = (self._values is not None) or (
+            self._errors is not None
         )
         return f"{self._name}:\n{formula}\nComputed: {computed}"
 
@@ -115,7 +118,7 @@ class BaseFormula(ABC):
         from grasp.analyzers.calculus import compute_numerical_function
 
         print(
-            f"""WARNING! Be sure that the input data follow this specific order: 
+            f"""WARNING! Be sure that the input data follow this specific order:
 Data:         {self.variables}"""
         )
         if errors is not None:
@@ -145,7 +148,7 @@ Correlations: {self._correlations}
 
 
 class BaseSample(_QTable):
-    
+
     """
     Base class for Sample and GcSample.
     It is used to define the common methods and attributes for both classes.
@@ -182,12 +185,12 @@ class BaseSample(_QTable):
         self.qinfo = None
         self._merge_info: _gt.DataFrame = None
         self.zp_corrected: bool = False
-        self.is_simulation = self.__check_simulation() if not data is None else False
+        self.is_simulation = self.__check_simulation() if data is not None else False
 
     def __str__(self):
         """The string representation"""
         if self.is_simulation:
-            return f"Simulated data sample" + "\n" + super().__str__()
+            return "Simulated data sample" + "\n" + super().__str__()
         else:
             return str(self.gc) + "\n" + super().__str__()
 
@@ -209,7 +212,7 @@ class BaseSample(_QTable):
     def __reversed__(self):
         """The reversed iterator"""
         return reversed(self.colnames)
-    
+
     def drop_columns(self, columns: list[str]):
         """
         Drops the specified columns from the sample data.
@@ -228,7 +231,7 @@ class BaseSample(_QTable):
     def describe(self):
         """Returns the description of the sample"""
         return self.to_pandas().describe()
-    
+
     def to_pandas(self, *args, **kwargs) -> _gt.TabularData:
         """
         Converts the sample (`astropy.QTable` as default) to a pandas DataFrame.
@@ -275,7 +278,7 @@ class BaseSample(_QTable):
         # Add columns from the backup QTable
         for col in self._bckupSample.itercols():
             self.add_column(col.copy())
-    
+
     def _base_join(self, other: _gt.TabularData, keep: str = "both") -> _gt.TabularData:
         """
         Joins the sample data with another sample data.
@@ -295,10 +298,7 @@ class BaseSample(_QTable):
             The sample object containing the joined data.
         """
         sample = self.to_pandas()
-        if not isinstance(other, _gt.DataFrame):
-            other_sample = other.to_pandas()
-        else:
-            other_sample = other
+        other_sample = other.to_pandas() if not isinstance(other, _gt.DataFrame) else other
         merged = sample.merge(other_sample, how="outer", indicator=True)
         if keep not in ["both", "left_only", "right_only"]:
             raise ValueError(
@@ -323,7 +323,7 @@ class BaseSample(_QTable):
         max_key = max(n_bad, key=n_bad.get)
         self.remove_rows(self.mask[max_key])
         return
-    
+
     def _base_apply_conditions(self, conditions: str | list[str] | dict[str, str]) -> _gt.TabularData:
         """
         Applies conditions to the sample data.
@@ -375,7 +375,7 @@ class BaseSample(_QTable):
         mask = eval(conds)
         filtered_sample: _gt.DataFrame = sample[mask]
         return filtered_sample
-    
+
     def _apply_conds_inplace(self, filtered_sample: _gt.DataFrame) -> None:
         # Store units before removing columns
         N_old=len(self)
@@ -388,7 +388,7 @@ class BaseSample(_QTable):
             self.remove_column(col)
         # Add columns back, restoring units if present
         for col in filtered_sample.columns:
-            unit = col_units.get(col, None)
+            unit = col_units.get(col)
             if unit is not None:
                 self[col] = filtered_sample[col].values * unit
             else:
@@ -409,7 +409,7 @@ class BaseSample(_QTable):
             "vy_[km/s]",
             "vz_[km/s]",
         ]
-        if all([a == b for a, b in zip(sim_a, self.colnames)]):
+        if all([a == b for a, b in zip(sim_a, self.colnames, strict=False)]):
             self.qinfo = "McLuster Simulation"
             self["M"] = self["Mass_[Msun]"] * _u.Msun
             self["x"] = self["x_[pc]"] * _u.pc

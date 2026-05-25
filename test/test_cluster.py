@@ -1,9 +1,12 @@
 import unittest
-from grasp._utility.cluster import Cluster
+from unittest.mock import MagicMock, patch
+
 import astropy.units as u
-import pandas as pd
 import numpy as np
-from unittest.mock import patch, MagicMock
+import pandas as pd
+
+from grasp._utility.cluster import Cluster
+
 
 class TestCluster(unittest.TestCase):
 

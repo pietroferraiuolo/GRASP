@@ -1,28 +1,28 @@
+from collections.abc import Callable
 from typing import (
     TYPE_CHECKING,
-    Callable,
-    TypeVar,
-    Union,
     Any,
     Optional,
     Protocol,
     TypeAlias,
+    TypeVar,
+    Union,
     runtime_checkable,
 )
-from numpy.typing import ArrayLike
-from pandas import DataFrame, Series
-from astropy.table import Table, QTable
-from astropy.units import Quantity
+
 import sympy as _sp
+from astropy.table import QTable, Table
+from numpy.typing import ArrayLike
+from pandas import DataFrame
 
 if TYPE_CHECKING:
-    from grasp._utility.sample import Sample
     from grasp._utility.cluster import Cluster
+    from grasp._utility.sample import Sample
     from grasp.analyzers._Rcode.r2py_models import (
         GaussianMixtureModel,
+        KFoldGMM,
         PyRegressionModel,
         RegressionModel,
-        KFoldGMM,
     )
 
 
@@ -65,7 +65,11 @@ GMModel: TypeAlias = Union["GaussianMixtureModel", "KFoldGMM"]
 Model = TypeVar("Model", bound=_ModelProtocol)
 
 Array: TypeAlias = Union[
-    ArrayLike, list[int], list[float], list[complex], list[int, float, complex]
+    ArrayLike,
+    list[int],
+    list[float],
+    list[complex],
+    list[Union[int, float, complex]],
 ]
 
 AnalyticalFunc: TypeAlias = Union[

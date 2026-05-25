@@ -1,8 +1,10 @@
-import unittest
 import io
 import sys
-import sympy as sp
+import unittest
 from contextlib import redirect_stdout
+
+import sympy as sp
+
 from grasp.formulary import Formulary
 
 # Language: python
@@ -46,7 +48,7 @@ class TestFormulary(unittest.TestCase):
         self.assertIn("x", output)
         self.assertIn("y", output)
         # latex expression
-        # NOTE: 
+        # NOTE:
         # this works, but it brakes githum workflow, idk why
         # commenting for now
         #

@@ -9,10 +9,11 @@ This module contains R libraries implementation checks
 for the GRASP package.
 """
 
-from typing import Union
 from logging import ERROR
-from rpy2.robjects.packages import importr, isinstalled, LibraryError
+from typing import Union
+
 from rpy2.rinterface_lib.callbacks import logger as rpy2_logger
+from rpy2.robjects.packages import LibraryError, importr, isinstalled
 
 # Disable unnecessary R logging
 rpy2_logger.setLevel(ERROR)

@@ -61,23 +61,41 @@ object:
     151 libname_gspphot
 """
 
-import os as _os
-import numpy as _np
 import configparser as _cp
-from grasp import types as _gt
+import logging as _logging
+import os as _os
+
+import numpy as _np
 from astropy import units as _u
 from astroquery.gaia import Gaia as _Gaia
-from grasp.core.osutils import (
-    get_kwargs,
-    timestamp as _ts,
-    load_data as _loadData,
-    tnlist as _tnlist,
-)
+
+from grasp import types as _gt
 from grasp.core.folder_paths import (
     BASE_DATA_PATH as _BDP,
+)
+from grasp.core.folder_paths import (
     CLUSTER_DATA_FOLDER as _CDF,
+)
+from grasp.core.folder_paths import (
     UNTRACKED_DATA_FOLDER as _UD,
 )
+from grasp.core.folder_paths import (
+    ensure_data_dir as _ensure_data_dir,
+)
+from grasp.core.osutils import (
+    get_kwargs,
+)
+from grasp.core.osutils import (
+    load_data as _loadData,
+)
+from grasp.core.osutils import (
+    timestamp as _ts,
+)
+from grasp.core.osutils import (
+    tnlist as _tnlist,
+)
+
+_logger = _logging.getLogger("grasp.gaia.query")
 
 _QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
@@ -247,7 +265,7 @@ WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
                 "Conditions_Applied": "None",
             }
         }
-        print(f"Initialized with Gaia table: '{gaia_table}'")
+        _logger.info("Initialized with Gaia table: '%s'", gaia_table)
 
     def __repr__(self):
         """The representation"""
@@ -370,8 +388,8 @@ WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
         """
         from grasp._utility.sample import GcSample
 
-        ra: _gt.Optional[float | str] = kwargs.get("ra", None)
-        dec: _gt.Optional[float | str] = kwargs.get("dec", None)
+        ra: _gt.Optional[float | str] = kwargs.get("ra")
+        dec: _gt.Optional[float | str] = kwargs.get("dec")
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
         self._queryInfo = {"Scan_Info": {"RA": ra, "DEC": dec, "Scan_Radius": radius}}
@@ -447,7 +465,7 @@ WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
         addata = kwargs.get("add_data", "")
         astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error,\
               pmra, pmra_error, pmdec, pmdec_error"
-        if not addata == "":
+        if addata != "":
             astrometry += ", " + addata
         astro_sample = self.free_gc_query(radius, gc, save, data=astrometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = astrometry
@@ -507,7 +525,7 @@ WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
         addata = get_kwargs(("add_data"), "", kwargs)
         photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, \
               phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
-        if not addata == "":
+        if addata != "":
             photometry += ", " + addata
         phot_sample = self.free_gc_query(radius, gc, save, data=photometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = photometry
@@ -611,19 +629,19 @@ WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
             query = self._adqlWriter(ra, dec, radius, data=data, conditions=cond)
             job = _Gaia.launch_job_async(query)
             sample = job.get_results()
-            print(f"Sample number of sources: {len(sample):d}")
+            _logger.info("Sample number of sources: %d", len(sample))
             self.last_result = sample
             if save:
                 self._saveQuery(sample, gc_id)
         else:
-            print(
-                f"""Found data with the same conditions for object {gc_id} in
-{check[1]}.
-Loading it..."""
+            _logger.info(
+                "Found existing data for object %s at %s; loading it.",
+                gc_id,
+                check[1],
             )
             sample = _loadData(tn=check[1], as_sample=False)
             self.last_result = check[1]
-            print(f"Sample number of sources: {len(sample):d}")
+            _logger.info("Sample number of sources: %d", len(sample))
         return sample
 
     def _saveQuery(self, dat: _gt.TabularData, name: str):
@@ -639,14 +657,11 @@ Loading it..."""
             Where to save the data, usually the cluster's name.
 
         """
-        from astropy.table import Table, QTable
+        from astropy.table import QTable, Table
 
         config = _cp.ConfigParser()
         tn = _ts()
-        if name.upper() == "UNTRACKEDDATA":
-            fold = _UD
-        else:
-            fold = self._checkPathExist(name.upper())
+        fold = _UD if name.upper() == "UNTRACKEDDATA" else self._checkPathExist(name.upper())
         tnfold = _os.path.join(fold, tn)
         _os.mkdir(tnfold)
         data = _os.path.join(tnfold, _QDATA)
@@ -661,12 +676,12 @@ Loading it..."""
 
         warnings.warn(
             "The 'query_info.ini' will be deprecated in future versions, shifting to the use of fits headers",
-            DeprecationWarning,
+            DeprecationWarning, stacklevel=2,
         )
         with open(info, "w", encoding="UTF-8") as configfile:
             config.write(configfile)
-        print(data)
-        print(info)
+        _logger.info("Wrote query data to %s", data)
+        _logger.info("Wrote query info to %s", info)
 
     def _writeHeader(self, data: _gt.AstroTable, name: str) -> _gt.AstroTable:
         """
@@ -688,7 +703,7 @@ Loading it..."""
         sinfo = self._queryInfo["Scan_Info"]
         header = {
             "OBJECT": (
-                name.upper() if not name.upper() == "UNTRACKEDDATA" else "UNDEF",
+                name.upper() if name.upper() != "UNTRACKEDDATA" else "UNDEF",
                 "object name",
             ),
             "RA": (
@@ -712,7 +727,7 @@ Loading it..."""
                 "radius of scan circle [deg]",
             ),
             "CONDS": (
-                not sinfo["Conditions_Applied"] == "None",
+                sinfo["Conditions_Applied"] != "None",
                 "Conditions_Applied to the query",
             ),
         }
@@ -734,9 +749,7 @@ Loading it..."""
 
         """
         self._fold = _CDF(dest)
-        if not _os.path.exists(self._fold):
-            _os.makedirs(self._fold)
-            print(f"Path '{self._fold}' did not exist. Created.")
+        _ensure_data_dir(self._fold)
         return self._fold
 
     def _formatCheck(
@@ -886,8 +899,8 @@ Loading it..."""
         from grasp._utility.cluster import Cluster
 
         if gc is None:
-            ra: float = kwargs.get("ra", None)
-            dec: float = kwargs.get("dec", None)
+            ra: float = kwargs.get("ra")
+            dec: float = kwargs.get("dec")
             gc: Cluster = Cluster(ra=ra, dec=dec)
             savename: str = kwargs.get("name", "UntrackedData")
         else:

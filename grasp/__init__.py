@@ -5,6 +5,17 @@ Author(s)
 ---------
 - Pietro Ferraiuolo : Written in 2024
 
+Logging
+-------
+The package follows the standard "library" pattern: a top-level
+``grasp`` logger is created with a :class:`~logging.NullHandler`, and the
+application (or the user's notebook) is responsible for configuring
+output. Enable verbose output with, e.g.,
+
+>>> import logging
+>>> logging.basicConfig(level=logging.INFO)
+
+
 Description
 -----------
 GRASP is a tool for analysing the data of globular clusters, with major
@@ -26,34 +37,36 @@ The software exposes the following sub-modules, each tackling a specific task:
 - ``core``: filesystem and IO helpers.
 """
 
+import logging as _logging
+
 from .__version__ import (
-    __title__,
-    __long_title__,
-    __description__,
-    __version__,
     __author__,
     __author_email__,
+    __description__,
     __license__,
+    __long_title__,
+    __title__,
     __url__,
+    __version__,
 )
 
-from .gaia._zero_point import zero_point_correction
-from .gaia.query import GaiaQuery, available_tables
-from .analyzers.mcluster import mcluster_run, docs as mcluster_docs
-from .analyzers import calculus
-from .analyzers._Rcode.r2py_models import (
-    RegressionModel,
-    GaussianMixtureModel,
-)
+logger = _logging.getLogger("grasp")
+logger.addHandler(_logging.NullHandler())
+
+from . import analyzers, core, plots, stats
 from ._utility.base_classes import BaseFormula
 from ._utility.cluster import Cluster, available_clusters
-from ._utility.sample import Sample, GcSample
+from ._utility.sample import GcSample, Sample
+from .analyzers import calculus
+from .analyzers._Rcode.r2py_models import (
+    GaussianMixtureModel,
+    RegressionModel,
+)
+from .analyzers.mcluster import docs as mcluster_docs
+from .analyzers.mcluster import mcluster_run
 from .formulary import Formulary, load_base_formulary
-
-from . import stats
-from . import plots
-from . import analyzers
-from . import core
+from .gaia._zero_point import zero_point_correction
+from .gaia.query import GaiaQuery, available_tables
 
 osu = core.osutils
 load_data = osu.load_data

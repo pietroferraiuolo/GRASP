@@ -13,14 +13,17 @@ radians for the symbolic backend (see the ``input_unit`` parameter).
 """
 
 import math as _math
+from typing import Literal as _Literal
 
 import sympy as _sp
 from astropy import units as _u
 from astropy.table import Table as _Table
 from numpy.typing import ArrayLike as _ArrayLike
-from typing import List as _List, Literal as _Literal
+
 from grasp.analyzers.calculus import (
     compute_numerical_function as _compute_numerical,
+)
+from grasp.analyzers.calculus import (
     error_propagation as _error_propagation,
 )
 
@@ -372,9 +375,9 @@ class CartesianConversion:
 
     def compute(
         self,
-        data: _List[_ArrayLike],
-        errors: _List[_ArrayLike] = None,
-        correlations: _List[_ArrayLike] = None,
+        data: list[_ArrayLike],
+        errors: list[_ArrayLike] = None,
+        correlations: list[_ArrayLike] = None,
     ):
         """
         Compute the cartesian conversion.
@@ -420,11 +423,11 @@ class CartesianConversion:
         if len(data) == 2:
             # Only positions are supplied: compute the spatial quantities and
             # skip the proper-motion branch entirely.
-            for var, eq, name in zip(var_set[:4], quantities[:4], tags[:4]):
+            for var, eq, name in zip(var_set[:4], quantities[:4], tags[:4], strict=False):
                 result = _compute_numerical(eq, var, data)
                 q_values[name] = result
         else:
-            for var, eq, name in zip(var_set, quantities, tags):
+            for var, eq, name in zip(var_set, quantities, tags, strict=False):
                 result = _compute_numerical(eq, var, data)
                 q_values[name] = result
         if errors is not None:
@@ -436,7 +439,7 @@ class CartesianConversion:
         self._values = q_values
         return self
 
-    def _convert_input(self, data: _List[_ArrayLike]) -> _List[_ArrayLike]:
+    def _convert_input(self, data: list[_ArrayLike]) -> list[_ArrayLike]:
         """Convert angular entries to radians for symbolic evaluation.
 
         The first two columns of ``data`` are ``ra``/``dec`` and must be

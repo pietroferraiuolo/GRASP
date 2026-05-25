@@ -1,10 +1,13 @@
-import unittest
 import os
+import unittest
 from unittest.mock import patch
-from astropy.table import Table
-from grasp.core import osutils as osu
-from grasp.core import folder_paths as fn
+
 import numpy as np
+from astropy.table import Table
+
+from grasp.core import folder_paths as fn
+from grasp.core import osutils as osu
+
 
 class TestOsutils(unittest.TestCase):
 
@@ -103,7 +106,7 @@ class TestOsutils(unittest.TestCase):
             os.path.join(
                 fn.QUERY_DATA_FOLDER,
                 'gc_folder3'
-            ), 
+            ),
             'tn_3'
         )
         self.assertEqual(result, expected)
