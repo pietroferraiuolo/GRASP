@@ -1,65 +1,64 @@
 """
-GAIA - GLOBULAR CLUSTER ANALYSIS SOFTWARE
-=========================================
+GRASP - Globular clusteR Astrometry and Photometry Software
+===========================================================
 Author(s)
 ---------
 - Pietro Ferraiuolo : Written in 2024
 
 Description
 -----------
-This software is designed to analyze the data of globular clusters, with major
-attention to those found in the Gaia database. While born as a tool for GCs and
-Gaia data, effort has been made to make it more general and applicable to other
-datasets and problems, whit an ample set of calculus and analyzing tools.
-The software includes the subsequent series of submodule, each tackling a
-specific task:
+GRASP is a tool for analysing the data of globular clusters, with major
+attention to those found in the Gaia archive. While born for GCs and Gaia
+data, it has been kept general enough to be applied to other datasets and
+problems, with an ample set of calculus and analysing tools.
 
-analyzers: 
-    Module for the analysis of the data. This module also contains the source code
-    for the Fortran King integration and the McLuster software, wrapped with
-    Python into their own modules. Also contains the various R source codes
-    for the statistical analysis.
-statistics: 
-    Module for the statistical analysis of data, including bayesian statistic
-    methods with machine learning techniques.
-plots: 
-    Module with inclues a series of usefull plotting functions, for better 
-    visualizing statistical data, as well as visualization of cluster's data.
-functions: 
-    Module with a series of analythical functions for the computation
-    of various cluster and source's parameters. (eg. distance, mean motion, ecc...)
-_query: 
-    To be changed
-_cluster: 
-    Module for the cluster class, which contains all the information of a specified cluster.
-_utility: 
-    Module with a series of utility functions, used in the various modules.
-    (eg. load_data, get_file_list, tnlist)
+The software exposes the following sub-modules, each tackling a specific task:
 
+- ``analyzers``: data analysis utilities. Wraps the Fortran King integrator
+  and the McLuster simulator, and historically hosted a set of R scripts for
+  statistical fitting (now superseded by Python implementations).
+- ``stats``: statistical analysis (regression, GMM, bootstrap, ...).
+- ``plots``: convenience plotting routines for astrometric/photometric data.
+- ``functions``: analytical helpers (currently ``CartesianConversion``).
+- ``gaia``: Gaia archive query interface.
+- ``formulary``: symbolic formula management and numerical evaluation.
+- ``_utility``: ``Cluster`` and ``Sample`` data classes.
+- ``core``: filesystem and IO helpers.
 """
 
-from .__version__ import *
+from .__version__ import (
+    __title__,
+    __long_title__,
+    __description__,
+    __version__,
+    __author__,
+    __author_email__,
+    __license__,
+    __url__,
+)
 
-from grasp.gaia._zero_point import zero_point_correction
-from grasp.gaia.query import GaiaQuery, available_tables
-from grasp.analyzers.mcluster import mcluster_run, docs as mcluster_docs
-from grasp.analyzers import calculus
-from grasp.analyzers._Rcode.r2py_models import (
+from .gaia._zero_point import zero_point_correction
+from .gaia.query import GaiaQuery, available_tables
+from .analyzers.mcluster import mcluster_run, docs as mcluster_docs
+from .analyzers import calculus
+from .analyzers._Rcode.r2py_models import (
     RegressionModel,
     GaussianMixtureModel,
 )
-from grasp._utility.cluster import Cluster, available_clusters
-from grasp._utility.sample import Sample, GcSample
-from grasp.formulary import Formulary, load_base_formulary
+from ._utility.base_classes import BaseFormula
+from ._utility.cluster import Cluster, available_clusters
+from ._utility.sample import Sample, GcSample
+from .formulary import Formulary, load_base_formulary
 
-from grasp import stats
-from grasp import plots
-from grasp import analyzers
-from grasp import core
+from . import stats
+from . import plots
+from . import analyzers
+from . import core
 
 osu = core.osutils
 load_data = osu.load_data
 gpaths = core.folder_paths
+
 
 def dr3():
     """Instance a GaiaQuery with DR3"""
@@ -74,7 +73,7 @@ def dr3():
     ;::;:.:;;:XXXXXXXXXXX::::::::;        __ _  __ _(_) __ _
     .;;..;;;:.:XXXXXXXXX$$$$$$$$$$X.     / _` |/ _` | |/ _` |
     :;..:;;;..:xXXXXXXX$$$$$$$$$$$$X    | (_| | (_| | | (_| |
-    :;:.:;;.XXXXXXXXX$$$$$$$$$$$$$$;     \__, |\__,_|_|\__,_|
+    :;:.:;;.XXXXXXXXX$$$$$$$$$$$$$$;     \\__, |\\__,_|_|\\__,_|
     .;;:.:X$$$$$$$$$$$$$$$$$$$$$$X.      |___/
     ..:;:$$$$$$$$$$$$$$$$$$$$$$X;.
      :;;;$$$$$$$$$$$$$$$$$$$$::;;             INITIALIZED
@@ -88,9 +87,20 @@ def dr3():
 
 
 __all__ = [
+    "__title__",
+    "__long_title__",
+    "__description__",
+    "__version__",
+    "__author__",
+    "__author_email__",
+    "__license__",
+    "__url__",
+    "available_clusters",
+    "available_tables",
     "zero_point_correction",
     "GaiaQuery",
     "mcluster_run",
+    "mcluster_docs",
     "calculus",
     "RegressionModel",
     "GaussianMixtureModel",
@@ -99,7 +109,13 @@ __all__ = [
     "Formulary",
     "load_base_formulary",
     "Sample",
+    "GcSample",
     "stats",
     "plots",
+    "analyzers",
+    "core",
+    "load_data",
+    "osu",
+    "gpaths",
     "dr3",
 ]
