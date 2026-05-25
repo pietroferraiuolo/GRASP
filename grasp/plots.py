@@ -490,7 +490,8 @@ def histogram(
         _, n_bins = knuth_bin_width(data, return_bins=True)
     elif n_bins == "detailed":
         n_bins = int(1.5 * _np.sqrt(len(data)))
-    _plt.ioff()
+    if dont_show:
+        _plt.ioff()
     _plt.figure(figsize=fsize)
     h = _plt.hist(data, bins=n_bins, color=hcolor, alpha=alpha)
     _plt.ylabel("counts")
@@ -510,9 +511,8 @@ def histogram(
         _plt.legend(loc="best", fontsize="medium")
     if xlim is not None:
         _plt.xlim(xlim)
-    if dont_show:
-        return res
-    _plt.show()
+    if not dont_show:
+        _plt.show()
     return res if out else None
 
 
@@ -804,6 +804,9 @@ def regressionPlot(
         - 'rcolor'
         - 'rescolor'
         - 'rc'
+    legend : bool
+        If True, a legend will be shown in the data plot. Default is True.
+
 
     """
     rm = _get_regression_model(regression_model, y_data, x_data, f_type)
@@ -817,6 +820,7 @@ def regressionPlot(
     pc = _osu.get_kwargs(("plot_color", "pcolor", "plotcolor", "pc"), "black", kwargs)
     fc = _osu.get_kwargs(("fit_color", "fcolor", "fitcolor", "fc"), "red", kwargs)
     rc = _osu.get_kwargs(("residuals_color", "rcolor", "rescolor", "rc"), "red", kwargs)
+    legendon = kwargs.get("legend", True)
     rfmt = kwargs.get("rfmt", "o-")
     fmt = kwargs.get("fmt", "--")
     fig, (fax, rax) = _plt.subplots(
@@ -850,7 +854,8 @@ def regressionPlot(
     # ---------------
     fax.set_ylabel("counts")
     fax.set_xlim(xlim)
-    fax.legend(loc="best", fontsize="medium")
+    if legendon:
+        fax.legend(loc="best", fontsize="medium")
     # --------------
     # Residuals plot
     # --------------
