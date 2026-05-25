@@ -14,40 +14,71 @@ of the statistical analysis is done through R scripts.
 """
 
 import os as _os
-import time as _time
 import warnings as _warnings
 
 import numpy as _np
 import pandas as _pd
-import rpy2.robjects as _ro
 from astroML.density_estimation import XDGMM
 from astropy.table import Table as _Table
-from rpy2.robjects import (
-    globalenv as _genv,
-)
-from rpy2.robjects import (
-    numpy2ri as _np2r,
-)
-from rpy2.robjects import (
-    pandas2ri as _pd2r,
-)
-from rpy2.robjects import (
-    r as _R,
-)
 from scipy.optimize import curve_fit as _curve_fit
 from scipy.optimize import minimize as _minimize
 from scipy.stats import poisson as _scipy_poisson
 
 from grasp import types as _T
-from grasp.analyzers._Rcode import check_packages as _checkRpackages
 from grasp.analyzers._Rcode import r2py_models as _rm
 from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
+from grasp.utils.rng import default_rng as _default_rng
+
+
+def _ensure_rpy2():
+    """Lazy import of the R bridge; raises with a clear hint if missing.
+
+    Returns
+    -------
+    tuple
+        ``(_ro, _genv, _np2r, _pd2r, _R, _check_packages)`` from rpy2.
+    """
+
+    try:
+        import rpy2.robjects as _ro
+        from rpy2.robjects import globalenv as _genv
+        from rpy2.robjects import numpy2ri as _np2r
+        from rpy2.robjects import pandas2ri as _pd2r
+        from rpy2.robjects import r as _R
+
+        from grasp.analyzers._Rcode import check_packages as _checkRpackages
+    except ImportError as e:  # pragma: no cover
+        raise ModuleNotFoundError(
+            "The R backend requires rpy2 and the optional R extra. "
+            "Install with `pip install grasp[r]`."
+        ) from e
+    return _ro, _genv, _np2r, _pd2r, _R, _checkRpackages
+
+
+def _use_r_backend(backend: str | None) -> bool:
+    """Return ``True`` if the caller has explicitly opted into the R path."""
+
+    if backend is not None:
+        return backend.lower() == "r"
+    return _os.environ.get("GRASP_R_BACKEND", "").lower() in {"1", "true", "yes", "on"}
+
+
+def _r_deprecation_warning() -> None:
+    _warnings.warn(
+        "The R backend is deprecated and will be removed in GRASP 1.0. "
+        "Set ``backend='python'`` (default) or remove the ``backend`` "
+        "keyword.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
 
 
 def XD_estimator(
     data: _T.Array,
     errors: _T.Array,
     correlations: _T.Optional[dict[tuple[int, int], _T.Array]] = None,
+    *,
+    seed: _T.Optional[int] = None,
     **xdargs: tuple[str, ...],
 ):
     """
@@ -68,6 +99,10 @@ def XD_estimator(
         The correlations between the data. If a dictionary, the keys are
         (i, j) tuples representing feature pairs and the values are
         (n_samples,) arrays of correlation coefficients for each sample.
+    seed : int, optional
+        Random seed for reproducible fits (P3-4). Previously the
+        ``random_state`` was set to ``int(time.time())`` which made
+        results irreproducible. Pass an integer to fix the RNG.
     *xdargs : optional
         XDGMM hyper-parameters for model tuning. See
         <a href="https://www.astroml.org/modules/generated/astroML.density_estimation.XDGMM.html">
@@ -86,57 +121,80 @@ def XD_estimator(
         covariance_matrix = _np.array(
             [_np.diag(e**2) for e in errors]
         )  # (n_samples, n_features, n_features)
-    model = XDGMM(random_state=_seed(), **xdargs)
+    rng = _default_rng(seed)
+    random_state = int(rng.integers(0, 2**31 - 1)) if seed is None else int(seed)
+    model = XDGMM(random_state=random_state, **xdargs)
     model.fit(x_data, covariance_matrix)
     return model
 
 
 def kfold_gmm_estimator(
-    data: _T.ArrayLike, folds: int, **gmm_params: dict[str, _T.Any]
-) -> _T.GMModel:
-    """
-    K-Fold Gaussian Mixture Model Estimation function.
-
-    This function fits a K-Fold Gaussian Mixture Model (GMM) to the input data.
-    The GMM is a probabilistic model that can be used to estimate the underlying
-    distribution of a dataset. The function uses the `mclust` R package to fit the
-    model.
+    data: _T.ArrayLike,
+    folds: int,
+    *,
+    backend: _T.Optional[str] = None,
+    seed: _T.Optional[int] = None,
+    **gmm_params: dict[str, _T.Any],
+) -> _T.Any:
+    """K-Fold cross-validated Gaussian Mixture Model.
 
     Parameters
     ----------
     data : numpy.ndarray
-        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
+        The data to be fitted, of shape ``(n_samples, n_features)``.
     folds : int
-        The number of folds for cross-validation.
+        Number of folds for cross-validation.
+    backend : {"python", "r"}, optional
+        Which implementation to use. Defaults to ``"python"`` (recommended);
+        ``"r"`` is kept for parity testing only and emits a
+        :class:`DeprecationWarning`. Can also be enabled via the
+        ``GRASP_R_BACKEND=1`` environment variable.
+    seed : int, optional
+        Seed forwarded to the Python implementation
+        (:func:`grasp.utils.rng.default_rng`). Has no effect on the R path.
     **gmm_params : optional
-        Additional keyword arguments for the R GM_model function. See
-        <a href="https://cran.r-project.org/web/packages/mclust/mclust.pdf">
-        mclust</a> documentation for more information.
-
-    Returns
-    -------
-    fitted_model : grasp.KFoldGMM
-        The fitted gaussian mixture model and its parameters.
+        Forwarded to the underlying GMM implementation. The Python port
+        accepts ``n_components``, ``model_name``, ``n_init``, ``max_iter``,
+        ``tol``. The R path forwards the kwargs verbatim to ``Mclust``.
     """
+    if _use_r_backend(backend):
+        return _kfold_gmm_estimator_r(data, folds, **gmm_params)
+    from grasp.analyzers.backends._python import kfold_gmm_python
+
+    n_components = int(gmm_params.pop("n_components", gmm_params.pop("G", 2)))
+    model_name = gmm_params.pop("model_name", gmm_params.pop("modelNames", "VII"))
+    return kfold_gmm_python(
+        data,
+        folds=folds,
+        n_components=n_components,
+        model_name=model_name,
+        seed=seed,
+        **gmm_params,
+    )
+
+
+def _kfold_gmm_estimator_r(
+    data: _T.ArrayLike, folds: int, **gmm_params: dict[str, _T.Any]
+) -> _T.Any:
+    """R-backed K-Fold GMM (deprecated; see ``grasp.analyzers.backends._python``)."""
+
+    _r_deprecation_warning()
     _warnings.warn(
-        "`kfold_gmm_estimator` currently relies on the R `KFoldGMM` routine "
-        "whose per-fold log-likelihood is mathematically incorrect (see the "
-        "`# FIXME: incorrect CV score` comment in "
-        "`grasp/analyzers/_Rcode/gaussian_mixture.R`). The Phase 3 Python "
-        "port computes the proper marginal log-likelihood via "
-        "`sklearn.mixture.GaussianMixture.score`. Treat the returned "
-        "`mean_loglik` with caution.",
+        "`kfold_gmm_estimator(backend='r')` invokes the R `KFoldGMM` "
+        "routine whose per-fold log-likelihood is mathematically "
+        "incorrect (see the ``# FIXME: incorrect CV score`` comment in "
+        "``grasp/analyzers/_Rcode/gaussian_mixture.R``). Use the Python "
+        "backend for trustworthy CV scores.",
         RuntimeWarning,
         stacklevel=2,
     )
+    _ro, _genv, _np2r, _pd2r, _R, _checkRpackages = _ensure_rpy2()
     _checkRpackages("mclust")
     _np2r.activate()
     code = _os.path.join(_RSF, "gaussian_mixture.R")
     _R(f'source("{code}")')
     r_data = _np2r.numpy2rpy(data)
-    # Convert kwargs to R list
     r_kwargs = _ro.vectors.ListVector(gmm_params)
-    # Call the R function with the data and additional arguments
     fitted_model = _genv["KFoldGMM"](r_data, folds, **dict(r_kwargs.items()))
     _np2r.deactivate()
     return _rm.KFoldGMM(fitted_model)
@@ -145,33 +203,57 @@ def kfold_gmm_estimator(
 def gaussian_mixture_model(
     train_data: _T.Array,
     fit_data: _T.Optional[_T.Array] = None,
+    *,
+    backend: _T.Optional[str] = None,
+    seed: _T.Optional[int] = None,
     **kwargs: dict[str, _T.Any],
-) -> _T.GMModel:
-    """
-    Gaussian Mixture Estimation function.
-
-    This function fits a Gaussian Mixture Model (GMM) to the input data.
-    The GMM is a probabilistic model that can be used to estimate the underlying
-    distribution of a dataset. The function uses the `mclust` R package to fit the
-    model.
+) -> _T.Any:
+    """Gaussian Mixture estimation.
 
     Parameters
     ----------
-    trin_data : numpy.ndarray
-        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
+    train_data : numpy.ndarray
+        Training set, shape ``(n_samples, n_features)``.
     fit_data : numpy.ndarray, optional
-        The data to be fitted with a gaussian mixture model, of shape `[n_samples, n_features]`.
-        If provided, the fitted model will perform predictions to this data.
+        If provided, cluster assignments are computed on this data set.
+    backend : {"python", "r"}, optional
+        Default is ``"python"`` (recommended). ``"r"`` is kept for parity
+        tests and emits a :class:`DeprecationWarning`.
+    seed : int, optional
+        Forwarded to the Python implementation for reproducibility.
     **kwargs : optional
-        Additional keyword arguments for the R GM_model function. See
-        <a href="https://cran.r-project.org/web/packages/mclust/mclust.pdf">
-        mclust</a> documentation for more information.
-
-    Returns
-    -------
-    fitted_model : grasp.GaussianMixtureModel
-        The fitted gaussian mixture model and its parameters.
+        Forwarded to the underlying implementation.
     """
+    if _use_r_backend(backend):
+        return _gaussian_mixture_model_r(train_data, fit_data, **kwargs)
+    from grasp.analyzers.backends._python import gaussian_mixture_model_python
+
+    n_components = int(kwargs.pop("n_components", kwargs.pop("G", 2)))
+    model_name = kwargs.pop("model_name", kwargs.pop("modelNames", "VII"))
+    n_init = int(kwargs.pop("n_init", kwargs.pop("nstart", 10)))
+    max_iter = int(kwargs.pop("max_iter", kwargs.pop("maxiter", 1000)))
+    tol = float(kwargs.pop("tol", 1e-6))
+    return gaussian_mixture_model_python(
+        train_data,
+        fit_data=fit_data,
+        n_components=n_components,
+        model_name=model_name,
+        n_init=n_init,
+        max_iter=max_iter,
+        tol=tol,
+        seed=seed,
+    )
+
+
+def _gaussian_mixture_model_r(
+    train_data: _T.Array,
+    fit_data: _T.Optional[_T.Array] = None,
+    **kwargs: dict[str, _T.Any],
+) -> _T.Any:
+    """R-backed Gaussian Mixture (deprecated)."""
+
+    _r_deprecation_warning()
+    _ro, _genv, _np2r, _pd2r, _R, _checkRpackages = _ensure_rpy2()
     _checkRpackages("mclust")
     _np2r.activate()
     code = _os.path.join(_RSF, "gaussian_mixture.R")
@@ -179,9 +261,7 @@ def gaussian_mixture_model(
     if fit_data is not None:
         r_data = _np2r.numpy2rpy(train_data)
         r_fit_data = _np2r.numpy2rpy(fit_data)
-        # Convert kwargs to R list
         r_kwargs = _ro.vectors.ListVector(kwargs)
-        # Call the R function with the data and additional arguments
         fitted_model = _genv["GMMTrainAndFit"](
             r_data, r_fit_data, **dict(r_kwargs.items())
         )
@@ -189,9 +269,7 @@ def gaussian_mixture_model(
         fitted_model = fitted_model.rx2("model")
     else:
         r_data = _np2r.numpy2rpy(train_data)
-        # Convert kwargs to R list
         r_kwargs = _ro.vectors.ListVector(kwargs)
-        # Call the R function with the data and additional arguments
         fitted_model = _genv["GaussianMixtureModel"](r_data, **dict(r_kwargs.items()))
         clusters = None
     _np2r.deactivate()
@@ -278,13 +356,15 @@ def fit_distribution(
     method: str = "gaussian",
     verbose: bool = True,
     plot: bool = False,
+    *,
+    backend: _T.Optional[str] = None,
 ) -> _T.RegressionModels:
-    """
-    Regression model estimation function.
+    """Fit the *distribution* of ``data`` to an analytical model.
 
-    This function fits the input data **_distribution_** to an analythical function.
-    The regression model can be of different types, such as linear, or gaussian
-    regression. The function uses the `minpack.lm` R package to fit the model.
+    Default backend is **Python** (:mod:`lmfit` / :mod:`scipy.optimize`).
+    Pass ``backend="r"`` (or set ``GRASP_R_BACKEND=1``) to force the
+    legacy R route via :mod:`rpy2` -- this path emits a
+    :class:`DeprecationWarning` and is retained only for parity tests.
 
     Parameters
     ----------
@@ -308,13 +388,12 @@ def fit_distribution(
 
     Returns
     -------
-    model : grasp.analyzers._Rcode.RegressionModel
-        The fitted regression model, translated from R to Py.
+    model : RegressionModel or PyFitResult
+        The fitted regression model. With ``backend="python"`` (default)
+        this is a :class:`grasp.analyzers.backends._python.PyFitResult`;
+        with ``backend="r"`` it is the legacy
+        :class:`grasp.analyzers._Rcode.r2py_models.RegressionModel`.
     """
-    _checkRpackages("minpack.lm")
-    _np2r.activate()
-    regression_code = _os.path.join(_RSF, "regression.R")
-    _R(f'source("{regression_code}")')
     if method == "linear":
         _warnings.warn(
             "The 'linear' method in `fit_distribution` is deprecated. Use "
@@ -322,6 +401,86 @@ def fit_distribution(
             DeprecationWarning,
             stacklevel=2,
         )
+    if _use_r_backend(backend):
+        return _fit_distribution_r(data, bins, method, verbose=verbose, plot=plot)
+    from grasp.analyzers.backends._python import (
+        fit_distribution_python,
+        linear_regression_python,
+    )
+
+    if method == "linear":
+        # The R linear branch took data in (x, y) form. Maintain that.
+        data_arr = _np.asarray(data)
+        if data_arr.ndim == 2 and data_arr.shape[-1] == 2:
+            x_arr = data_arr[:, 0]
+            y_arr = data_arr[:, 1]
+        else:
+            x_arr = _np.linspace(_np.finfo(_np.float32).eps, 1.0, len(data_arr))
+            y_arr = data_arr
+        py_model = linear_regression_python(x_arr, y_arr)
+        result = _rm.PyRegressionModel(
+            {
+                "data": {"x": x_arr, "y": y_arr},
+                "x": py_model["x"],
+                "y_fit": py_model["y"],
+                "parameters": py_model["coeffs"],
+                "residuals": py_model["residuals"],
+                "covmat": "unavailable",
+            },
+            kind="linear",
+        )
+        result.p_values = py_model["p_values"]
+        result.rsquared = py_model["rsquared"]
+        result.summary_text = py_model["summary"]
+        if plot:
+            from grasp.plots import regressionPlot
+
+            regressionPlot(result)
+        return result
+
+    py_result = fit_distribution_python(_np.asarray(data), method=method, bins=bins)
+    # Adapt to the historical PyRegressionModel API for downstream consumers
+    # (notably ``grasp.plots.regressionPlot``).
+    adapter = _rm.PyRegressionModel(
+        {
+            "data": py_result.data,
+            "x": py_result.x,
+            "y_fit": py_result.y,
+            "parameters": py_result.coeffs,
+            "residuals": py_result.residuals,
+            "covmat": (
+                py_result.covariance_matrix
+                if py_result.covariance_matrix is not None
+                else "unavailable"
+            ),
+        },
+        kind=method,
+    )
+    adapter.covariance_matrix = py_result.covariance_matrix
+    if plot:
+        from grasp.plots import regressionPlot
+
+        regressionPlot(adapter)
+    return adapter
+
+
+def _fit_distribution_r(
+    data: _T.Array,
+    bins: str | int | _T.Array,
+    method: str,
+    *,
+    verbose: bool,
+    plot: bool,
+) -> _T.RegressionModels:
+    """Original R-backed distribution fit (deprecated)."""
+
+    _r_deprecation_warning()
+    _ro, _genv, _np2r, _pd2r, _R, _checkRpackages = _ensure_rpy2()
+    _checkRpackages("minpack.lm")
+    _np2r.activate()
+    regression_code = _os.path.join(_RSF, "regression.R")
+    _R(f'source("{regression_code}")')
+    if method == "linear":
         _pd2r.activate()
         reg_func = _genv["linear_regression"]
         D = _np.array(data).shape[-1] if isinstance(data, list) else data.shape[-1]
@@ -335,16 +494,13 @@ def fit_distribution(
     else:
         reg_func = _genv["regression"]
         if isinstance(bins, str) and bins == "knuth":
-            # print("knuth?") # DEBUG
             from astropy.stats import knuth_bin_width
 
             _, bins = knuth_bin_width(data, return_bins=True)
             bins = _np2r.numpy2rpy(bins)
         elif isinstance(bins, int):
-            # print("int?") # DEBUG
             bins = _ro.IntVector([bins])
         elif isinstance(bins, (list, _np.ndarray)):
-            # print("array?") # DEBUG
             bins = _np2r.numpy2rpy(bins)
         r_data = _np2r.numpy2rpy(data)
         regression_model = reg_func(r_data, method=method, bins=bins, verb=verbose)
@@ -901,5 +1057,3 @@ def _construct_covariance_matrices(
     return cov_tensor
 
 
-def _seed():
-    return int(_time.time())
