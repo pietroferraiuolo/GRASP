@@ -5,5 +5,3 @@ GRASP
    :maxdepth: 4
 
    grasp
-   setup
-   test

@@ -1,62 +1,57 @@
+"""Sphinx configuration for GRASP.
+
+The configuration is intentionally minimal. ``sphinx-build`` is expected
+to be run from the repository root or from ``docs/`` so that
+``grasp`` is importable. The version is pulled from the installed
+package metadata.
+"""
+
+from __future__ import annotations
+
 import os
 import sys
-sys.path.insert(0, os.path.abspath('/home/pietrof/git/GRASP'))
-# Configuration file for the Sphinx documentation builder.
-#
-# This file only contains a selection of the most common options. For a full
-# list see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 
-# -- Path setup --------------------------------------------------------------
+sys.path.insert(0, os.path.abspath("../.."))
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-#
-# import os
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+project = "GRASP: Globular clusteR Astrometry and Photometry Software"
+copyright = "2024-2026, Pietro Ferraiuolo"
+author = "Pietro Ferraiuolo"
 
+try:
+    release = _pkg_version("grasp")
+except PackageNotFoundError:
+    from grasp.__version__ import __version__ as release  # type: ignore[no-redef]
 
-# -- Project information -----------------------------------------------------
-
-project = 'GRASP: Globular clusteR Astrometry and Photometry Software'
-copyright = '2024, Pietro Ferraiuolo'
-author = 'Pietro Ferraiuolo'
-
-# The full version, including alpha/beta/rc tags
-release = '0.9.1'
-
-
-# -- General configuration ---------------------------------------------------
-
-# Add any Sphinx extension module names here, as strings. They can be
-# extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
-# ones.
 extensions = [
-        'sphinx.ext.autodoc',
-        'sphinx.ext.napoleon',
-        'sphinx.ext.mathjax',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "numpydoc",
 ]
-autodoc_mock_imports=['setup']
 
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+autodoc_mock_imports = [
+    "setup",
+    "rpy2",
+    "astroML",
+    "astroquery",
+]
 
-# List of patterns, relative to source directory, that match files and
-# directories to ignore when looking for source files.
-# This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+numpydoc_show_class_members = False
 
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy", None),
+    "astropy": ("https://docs.astropy.org/en/stable", None),
+    "sklearn": ("https://scikit-learn.org/stable", None),
+    "sympy": ("https://docs.sympy.org/latest", None),
+}
 
-# -- Options for HTML output -------------------------------------------------
+templates_path = ["_templates"]
+exclude_patterns: list[str] = []
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
-# a list of builtin themes.
-#
-html_theme = 'sphinx_rtd_theme'
-
-# Add any paths that contain custom static files (such as style sheets) here,
-# relative to this directory. They are copied after the builtin static files,
-# so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_theme = "sphinx_rtd_theme"
+html_static_path = ["_static"]

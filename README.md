@@ -4,50 +4,97 @@
 The GRASP package is a tool for astrophysical data analysis, mainly thought for Globular CLusters 
 astrometric and photometric data retrievement and GCs dynamical evolution analysis.
 
+## What's new (2026-05 cleanup)
+
+The current development branch is the result of a multi-phase cleanup
+(see [`CHANGELOG.md`](./CHANGELOG.md)). The most user-visible changes:
+
+- **Pure-Python statistical backends** based on `scipy`, `lmfit`,
+  `statsmodels` and `scikit-learn` are now the *default*. The R-backed
+  paths still exist for parity testing but emit a `DeprecationWarning`
+  on every call and are scheduled for removal in **GRASP 1.0**. Opt
+  into the R backend with the `backend="r"` kwarg or the environment
+  variable `GRASP_R_BACKEND=1`.
+- **Supported Python versions**: 3.10, 3.11, 3.12 and 3.13.
+- **Reproducible RNG**: every public stochastic API accepts a `seed=`
+  keyword that is fed through `grasp.utils.rng.default_rng`.
+- **No more side-effects at import time**: data directories are created
+  lazily, R packages are installed on demand, and `rpy2` is imported
+  only when the R backend is invoked.
+
 ## Table of Contents
 
-- [Installation Guide](#installation)
-    - [Build R](#build-r)
+- [Installation Guide](#installation-guide)
+    - [Quick start](#quick-start-python-only)
+    - [Optional: R backend for parity testing](#optional-r-backend-for-parity-testing)
     - [ANTLR4](#install-latex-parser-dependencies)
-    - [GRASP](#installing-grasp)
 - [Examples](#retrieving-data)
 
 ## Installation Guide
-Since this package uses a combination of Python (mainly), R, C and Fortran, some additional steps, as
-to avoid errors in the code execution, must be done before installing the package.
 
-<ins>NOTE</ins>: The use of a conda environment with `python >= 3.10` is highly recommended for the
-correct functioning of the package.
+GRASP requires Python **3.10-3.13**. A virtual environment (`venv` or
+`conda`) is strongly recommended.
 
-<ins>NOTE2</ins>: All the extra steps necessay will be accounted for in the setup of the package 
-itself, sooner or later...
-
-### Build R
-Firstly, one must install R, as the `statistics` module of the package uses R code to perform regression routines:
+### Quick start (Python-only)
 
 ```bash
-sudo apt update
-sudo apt install r-base r-base-dev
+pip install git+https://github.com/pietroferraiuolo/GRASP.git
 ```
 
-This will install the latest R distribution, as well as all the base packages that coome with it. The
-`dev` install makes sure the appropriate compilers are installed, so that R packages can be correctly
-built upon installing them. If compiler errors arise (mentioning `GLIBCXX_3.4.XX not found for librosa`), try installing directly the `gcc` compiler:
+For an editable checkout with the developer tooling
+(`pytest`, `ruff`, `mypy`):
 
 ```bash
-conda install -c conda-forge gcc
+git clone https://github.com/pietroferraiuolo/GRASP.git
+cd GRASP
+pip install -e ".[dev]"
 ```
 
-If the error does not disappear, try updating directly the `libstdcxx-ng` package
+Once the project is published on PyPI you will be able to:
 
 ```bash
-conda install -c conda-forge libstdcxx-ng
+pip install grasp          # Python-only (recommended)
+pip install "grasp[r]"     # add the deprecated R backend for parity tests
+pip install "grasp[docs]"  # Sphinx + numpydoc to rebuild the docs
 ```
+
+### Optional: R backend for parity testing
+
+The R routines historically lived in `grasp/analyzers/_Rcode`. They
+remain available behind the optional `[r]` extra strictly so that
+existing notebooks can be reproduced -- new code should use the
+Python implementations.
+
+1. Install R (e.g. on Debian/Ubuntu):
+
+   ```bash
+   sudo apt update
+   sudo apt install r-base r-base-dev
+   ```
+
+2. Install GRASP with the `r` extra:
+
+   ```bash
+   pip install "grasp[r]"
+   # or, from a checkout:
+   pip install -e ".[r]"
+   ```
+
+3. The first R-backend invocation will raise a `RuntimeError` with
+   install instructions for the required R packages (`minpack.lm`,
+   `mclust`). Install them inside R:
+
+   ```bash
+   Rscript -e 'install.packages(c("minpack.lm", "mclust"), repos="https://cloud.r-project.org/")'
+   ```
+
+4. Either pass `backend="r"` explicitly or set
+   `GRASP_R_BACKEND=1` in your environment.
 
 ### Install latex parser dependencies: ANTLR4
-Since the `formulary` module, which handles formulas definitions and computations, use both the sympy
-and the latex syntax interpreter, the latter needs an additional package to run: the ANTLR4 python 
-routine. As of version `0.2.0` of GRASP, the precise version to install is:
+
+The `formulary` module mixes SymPy with a LaTeX parser that depends on
+ANTLR4. Pin the runtime version:
 
 ```bash
 pip install antlr4-python3-runtime==4.11
@@ -57,14 +104,6 @@ Equivalently:
 
 ```bash
 conda install -c conda-forge antlr4-python3-runtime==4.11
-```
-
-### Installing GRASP
-Finally, when everything is set up, install the package through the repository, as no PyPI release
-exists yet:
-
-```bash
-pip install git+'https://github.com/pietroferraiuolo/GRASP.git'
 ```
 
 <details>
@@ -351,7 +390,7 @@ Angular Separation
 theta_{2*D} = 2*asin(sqrt((sin((alpha_{0} - alpha_{1})/2)**2*cos(delta_{1}))*cos(delta_{0}) + sin((delta_{0} - delta_{1})/2)**2))
 
 Los Distance
-r_{x} = 1/omega
+r_{pc} = 1000/varpi_{mas}      # ϖ in mas -> r in pc (Gaia convention)
 
 Radial Distance 2D
 r_{2*d} = r_{c*g}*tan(theta_{2*D})

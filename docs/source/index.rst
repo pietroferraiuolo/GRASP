@@ -1,21 +1,26 @@
-.. GRASP: Gaia Globular Clusters Analysis Software documentation master file, created by
-   sphinx-quickstart on Wed Jul 3 2024.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+.. GRASP documentation master file.
 
 GRASP: Globular clusteR Astrometry and Photometry Software
 ==========================================================
 
+GRASP is a Python toolkit for the analysis of globular cluster
+kinematics and astrometry, with first-class support for Gaia data
+retrieved through :mod:`astroquery`. It bundles plotting, statistics,
+symbolic helpers and (deprecated, Phase 3 onward) thin wrappers around
+a handful of legacy R routines.
+
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: API reference
 
-   analyzers
-   formulary
-   gaia
-   plots
-   stats
-   _utility
+   grasp.analyzers
+   grasp._utility
+   grasp.utils
+   grasp.functions
+   grasp.formulary
+   grasp.gaia
+   grasp.plots
+   grasp.stats
 
 
 Indices and tables

@@ -1,58 +1,117 @@
 name: Python Test
+
 permissions:
   contents: read
   pull-requests: write
 
 on:
   push:
-    branches: [ main]
+    branches: [main]
     paths-ignore:
-      - './grasp/data/**'
-      - './grasp/king/**'
-      - './scripts/**'
+      - "./grasp/data/**"
+      - "./grasp/king/**"
+      - "./scripts/**"
   pull_request:
-    branches: [ main ]
+    branches: [main]
+
 jobs:
-  build:
-    runs-on: ${{ matrix.os }}
+  python:
+    name: Python ${{ matrix.python-version }} (no R)
+    runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: ["3.x"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+
     steps:
-    - name: "Set Environment Variables" 
-      run: |
-        echo "GCASDATA=${{github.workspace}}/grasp" >> $GITHUB_ENV
-        echo $GCASDATA
-        echo $GITHUB_ENV
-    - uses: actions/checkout@v4
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Set up R
-      uses: r-lib/actions/setup-r@v2
-      with:
-        r-version: '4.1.0'
-    - name: Cache pip dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install antlr4-python3-runtime==4.11
-        pip install openpyxl -r requirements.txt
-    - name: Lint with flake8
-      run: |
-        pip install flake8
-        # stop the build if there are Python syntax errors or undefined names
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude ./scripts --exit-zero --max-complexity=10 --max-line-length=127
-    - name: Test with pytest
-      run: |
-        pip install pytest pytest-cov
-        pytest --cov=./
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+      - name: Install Python project (with dev extras)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lockfile artifact (pip freeze)
+        run: |
+          mkdir -p artifacts
+          pip freeze > artifacts/pip-freeze-${{ matrix.python-version }}.txt
+
+      - name: Ruff lint
+        run: |
+          ruff check grasp test
+
+      - name: Run tests with coverage
+        env:
+          MPLBACKEND: Agg
+        run: |
+          pytest -ra -q --cov=grasp --cov-report=xml --cov-report=term
+
+      - name: Upload coverage XML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ matrix.python-version }}
+          path: coverage.xml
+
+      - name: Upload lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-freeze-${{ matrix.python-version }}
+          path: artifacts/pip-freeze-${{ matrix.python-version }}.txt
+
+  r-parity:
+    name: R parity (optional)
+    needs: python
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: "4.3.2"
+
+      - name: Install Python project with R extra
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev,r]"
+
+      - name: Install required R packages
+        run: |
+          Rscript -e 'install.packages(c("minpack.lm", "mclust"), repos="https://cloud.r-project.org/")'
+
+      - name: Record R session info
+        run: |
+          mkdir -p artifacts
+          Rscript -e 'sessionInfo()' > artifacts/r-sessioninfo.txt
+
+      - name: Run R-marked tests
+        env:
+          MPLBACKEND: Agg
+          GRASP_R_BACKEND: "1"
+        run: |
+          pytest -ra -q -k "r_backend or parity" --cov=grasp --cov-report=xml --cov-report=term || true
+
+      - name: Upload R session info
+        uses: actions/upload-artifact@v4
+        with:
+          name: r-sessioninfo
+          path: artifacts/r-sessioninfo.txt

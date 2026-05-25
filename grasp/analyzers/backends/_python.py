@@ -171,9 +171,13 @@ def _bin_edges(data: np.ndarray, bins: Union[str, int, np.ndarray]) -> np.ndarra
         raise ValueError(f"Unknown bins spec: {bins!r}")
     if isinstance(bins, int):
         return np.linspace(np.min(data), np.max(data), bins + 1)
-    edges = np.asarray(bins, dtype=float)
-    edges[0] = np.min(data)
-    edges[-1] = np.max(data)
+    edges = np.array(bins, dtype=float, copy=True)
+    # Guard against non-monotonic edges (e.g. when ``bins`` was computed
+    # for a different dataset and the caller re-uses it).
+    if np.any(np.diff(edges) <= 0):
+        raise ValueError(
+            "Provided `bins` array is not strictly monotonically increasing."
+        )
     return edges
 
 
