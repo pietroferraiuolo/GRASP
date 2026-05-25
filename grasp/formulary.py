@@ -1,5 +1,5 @@
 """
-Author(s) 
+Author(s)
 ---------
 - Pietro Ferraiuolo : written in 2024
 
@@ -8,14 +8,19 @@ Description
 """
 
 import os as _os
+
 import sympy as _sp
-from sympy.parsing import latex as _latex, sympy_parser as _symparser
+from sympy.parsing import latex as _latex
+from sympy.parsing import sympy_parser as _symparser
+
+from grasp import types as _gt
 from grasp._utility.base_classes import BaseFormula as _BaseFormula
 from grasp.core.folder_paths import (
-    SYS_DATA_FOLDER as _sdf,
     FORMULARY_BASE_FILE as _fbf,
 )
-from grasp import types as _gt
+from grasp.core.folder_paths import (
+    SYS_DATA_FOLDER as _sdf,
+)
 
 _str2py = str.maketrans(
     {
@@ -55,12 +60,16 @@ class Formulary:
 
     """
 
-    def __init__(self, name: str = "", formula_names: list = [], formulas: list = []):
+    def __init__(self, name: str = "", formula_names: list = None, formulas: list = None):
         """The constructor"""
+        if formulas is None:
+            formulas = []
+        if formula_names is None:
+            formula_names = []
         self.name = name
         self.symbols = set({})
         self.functions = set({})
-        self.formulas = dict(zip(formula_names, formulas))
+        self.formulas = dict(zip(formula_names, formulas, strict=False))
         self._type = None
         self._file = None
         self._latexFormulas = {}
@@ -147,14 +156,13 @@ class Formulary:
             else self.formulas[name]
         )
         variables = self._get_ordered_variables(formula)
-        if not all([v.name in data.keys() for v in variables]):
+        if not all([v.name in data for v in variables]):
             raise ValueError("Missing data for some variables in the formula.")
         if errors is not None:
-            if not all([("epsilon_" + v.name) in errors.keys() for v in variables]):
+            if not all([("epsilon_" + v.name) in errors for v in variables]):
                 raise ValueError("Missing errors for some variables in the formula.")
             if corrs is not None:
                 var_names = [v.name for v in variables]
-                checked_pairs = set()
                 for i, v1 in enumerate(var_names):
                     for v2 in var_names[i + 1 :]:
                         key1 = f"rho_{v1}_{v2}"
@@ -315,7 +323,7 @@ class Formulary:
             The name of the formula.
 
         """
-        if name in self.formulas.keys():
+        if name in self.formulas:
             formula = self.formulas[name]
             if isinstance(formula, _sp.Equality):
                 symbols = formula.rhs.free_symbols
@@ -338,13 +346,13 @@ class Formulary:
             The name of the file to load the formulary from.
 
         """
-        if not ".frm" in filename:
+        if ".frm" not in filename:
             filename += ".frm"
         if len(filename.split("/")) == 1:
             filename = _os.path.join(_sdf, filename)
         self._file = filename
         self.name = filename.split("/")[-1].split(".")[0]
-        with open(filename, "r", encoding="utf-8") as frm:
+        with open(filename, encoding="utf-8") as frm:
             content = frm.readlines()
         self._type = content[0].split(":")[1].strip()
         for i in range(1, len(content), 2):
@@ -382,7 +390,7 @@ class Formulary:
             The name of the file to save the formulary to.
 
         """
-        if not ".frm" in filename:
+        if ".frm" not in filename:
             filename += ".frm"
         if len(filename.split("/")) == 1:
             filename = _os.path.join(_sdf, filename)
@@ -392,13 +400,13 @@ class Formulary:
                 for name, formula in self.formulas.items():
                     frm.write(f"{name}\n{str(formula)}\n")
             elif ftype == "latex":
-                if not self._latexFormulas is None:
+                if self._latexFormulas is not None:
                     import warnings
 
                     warnings.warn(
                         "\nOnly the provided LaTeX formulas will be saved, "
                         "as sympy expressions can't be converted to LaTeX ones.",
-                        UserWarning,
+                        UserWarning, stacklevel=2,
                     )
                     for name, formula in self._latexFormulas.items():
                         frm.write(f"{name}\n{formula}\n")
@@ -419,9 +427,7 @@ class Formulary:
             pass
         elif name in fk_lower:
             name = name.capitalize()
-        elif name in fk_cap:
-            name = name.lower().capitalize()
-        elif name in fk_tit:
+        elif name in fk_cap or name in fk_tit:
             name = name.lower().capitalize()
         elif name in fk_l_us:
             name = name.translate(_py2str).capitalize()
@@ -474,14 +480,25 @@ class Formulary:
 
 
 def load_base_formulary():
-    """
-    Load the base formulary file.
+    """Load the bundled base formulary.
+
+    Notes
+    -----
+    The shipped formulary uses Gaia-friendly units. In particular the
+    "Los Distance" entry assumes ``ϖ`` in milliarcseconds and yields the
+    line-of-sight distance in parsecs:
+
+    .. math:: r_\\mathrm{pc} = \\dfrac{1000}{\\varpi_\\mathrm{mas}}\\,.
+
+    If instead you have ``ϖ`` already in arcseconds, the equivalent
+    relation is :math:`r_\\mathrm{pc} = 1 / \\varpi_\\mathrm{arcsec}`. The
+    Gaia DR3 source catalogue distributes parallaxes in mas, which is
+    why the default base formulary uses the mas convention.
 
     Returns
     -------
-    formulary : Formulary object
+    formulary : Formulary
         The formulary object containing the base formulary.
-
     """
     formulary = Formulary()
     formulary.load_formulary(_fbf)

@@ -21,8 +21,9 @@ Functions
 
 import os
 import subprocess
-from grasp.core.osutils import get_file_list
+
 from grasp.core.folder_paths import KING_INTEGRATOR_FOLDER
+from grasp.core.osutils import get_file_list
 
 _king_dir = KING_INTEGRATOR_FOLDER
 _king_exe = os.path.join(_king_dir, "king_integrator")

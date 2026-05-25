@@ -1,7 +1,10 @@
 import unittest
+
 import numpy as np
 from astropy.table import QTable
-from grasp._utility.sample import Sample, GcSample
+
+from grasp._utility.sample import GcSample, Sample
+
 
 class TestSample(unittest.TestCase):
     def setUp(self):

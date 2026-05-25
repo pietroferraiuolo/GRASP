@@ -17,17 +17,22 @@ Just import the module
 
 """
 
+import matplotlib.pyplot as _plt
 import numpy as _np
 import seaborn as sns
+
 from grasp import types as _T
-import matplotlib.pyplot as _plt
-from grasp.core import osutils as _osu
-from grasp.stats import fit_distribution as _kde_estimator
 from grasp.analyzers._Rcode.r2py_models import (
-    _kde_labels,
-    RegressionModel as _RegressionModel,
     PyRegressionModel as _FakeRegModel,
 )
+from grasp.analyzers._Rcode.r2py_models import (
+    RegressionModel as _RegressionModel,
+)
+from grasp.analyzers._Rcode.r2py_models import (
+    _kde_labels,
+)
+from grasp.core import osutils as _osu
+from grasp.stats import fit_distribution as _kde_estimator
 
 label_font: dict[str, str | int] = {
     "family": "serif",
@@ -118,8 +123,8 @@ def doubleHistScatter(
     title = kwargs.get("title", "")
     xlabel = kwargs.get("xlabel", "")
     ylabel = kwargs.get("ylabel", "")
-    xlim = kwargs.get("xlim", None)
-    ylim = kwargs.get("ylim", None)
+    xlim = kwargs.get("xlim")
+    ylim = kwargs.get("ylim")
     alpha = kwargs.get("alpha", 0.7)
     colory = kwargs.get("colory", "blue")
     colorx = kwargs.get("colorx", "green")
@@ -344,9 +349,9 @@ def spatial(sample: _T.TabularData, show: bool = True, **kwargs: dict[str, _T.An
     alpha = kwargs.get("alpha", 0.15)
     colorbar = kwargs.get("colorbar", False)
     clabel = _osu.get_kwargs(("colorbar_label", "clabel", "cl"), "", kwargs)
-    cmap = kwargs.get("cmap", None)
-    xlim = kwargs.get("xlim", None)
-    ylim = kwargs.get("ylim", None)
+    cmap = kwargs.get("cmap")
+    xlim = kwargs.get("xlim")
+    ylim = kwargs.get("ylim")
     title = kwargs.get("title", "Spatial Distribution")
     axxis = kwargs.get("axis", "equal")
     ra = sample["ra"].value
@@ -598,7 +603,7 @@ def scatterXHist(
     ax1.text(
         x.max() * 0.1,
         y.max(),
-        r"$<${}$>=(${:.2f}$\,\pm\,${:.2f}$)$".format(xlabel, mean_x, err_xm),
+        rf"$<${xlabel}$>=(${mean_x:.2f}$\,\pm\,${err_xm:.2f}$)$",
         color="black",
         fontsize=12,
     )
@@ -904,7 +909,7 @@ def _get_regression_model(
     if isinstance(regression_model, (_RegressionModel, _FakeRegModel)):
         rm = regression_model
     elif y_data is not None:
-        if not regression_model is None:
+        if regression_model is not None:
             if which == "distribution":
                 model = _kde_estimator(y_data, method=regression_model, verbose=False)
                 rm = model

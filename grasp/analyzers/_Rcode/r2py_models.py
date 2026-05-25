@@ -14,10 +14,16 @@ to the model parameters and results.
 import numpy as _np
 import rpy2.robjects as _ro
 from rpy2.robjects import (
-    pandas2ri as _pd2r,
-    numpy2ri as _np2r,
     # rinterface as _ri,
     globalenv as _genv,
+)
+from rpy2.robjects import (
+    numpy2ri as _np2r,
+)
+from rpy2.robjects import (
+    pandas2ri as _pd2r,
+)
+from rpy2.robjects import (
     r as _R,
 )
 
@@ -35,7 +41,7 @@ class GaussianMixtureModel:
         self.classification = (
             _listvector_to_dict(predictions) if predictions is not None else None
         )
-        self._predicted = False if predictions is None else True
+        self._predicted = predictions is not None
         self._manage_parameters()
 
     def __repr__(self):
@@ -70,7 +76,7 @@ Predicted : {self._predicted}
         if "test_data" in self.model:
             return _np.reshape(self.model["test_data"], (self.ndG[1], self.model['n_test'])).T
         else:
-            raise ValueError("No test data available in the model.") 
+            raise ValueError("No test data available in the model.")
 
     @property
     def data(self):
@@ -161,8 +167,10 @@ Predicted : {self._predicted}
             The predicted membership probability for each data point.
         """
         import os
-        from .r_check import check_packages
+
         from grasp.core.folder_paths import R_SOURCE_FOLDER as _RSF
+
+        from .r_check import check_packages
 
         check_packages("mclust")
         _np2r.activate()
@@ -319,7 +327,7 @@ class RegressionModel:
 
     def __init__(self, r_model=None, kind: str = ""):
         """The Constructor"""
-        if not r_model is None:
+        if r_model is not None:
             self.rmodel = r_model
             self.model = _listvector_to_dict(r_model)
             self._model_kind = kind if kind != "" else self.model["kind"]
@@ -340,8 +348,8 @@ class RegressionModel:
         txt.pop(0)
         txt = ("\n".join(txt)).replace("$", "")
         str_ = f"""----------------------------------------------------
-Python wrapper for R Levenberg-Marquardt Nonlinear 
-              Least-Squares Algorithm            
+Python wrapper for R Levenberg-Marquardt Nonlinear
+              Least-Squares Algorithm
 ----------------------------------------------------
 .rmodel : R model object as rpy2.robjects
 .model  : R Model translation into Py dict
@@ -540,10 +548,10 @@ $x_0$   = {_format_number(x0)}
 $dx$   = {_format_number(dx)}"""
 
     elif kind == "exponential":
-        A, lmbda = coeffs
-        label = f"""Exponential
+        A, b = coeffs
+        label = f"""Exponential ($A\\,e^{{-b\\,x}}$)
 $A$   = {_format_number(A)}
-$\\lambda$ = {_format_number(lmbda)}"""
+$b$   = {_format_number(b)}"""
 
     elif kind == "king":
         A, ve, sigma = coeffs
@@ -581,7 +589,7 @@ $n$   = {_format_number(n)}"""
         A, mu, sigma = coeffs
         label = f"""Lognormal
 $A$   = {_format_number(A)}
-$\mu$   = {_format_number(mu)}
+$\\mu$   = {_format_number(mu)}
 $\\sigma$  = {_format_number(sigma)}"""
 
     elif kind == "poisson":

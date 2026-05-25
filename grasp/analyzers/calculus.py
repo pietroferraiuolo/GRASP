@@ -12,11 +12,17 @@ How to Use it
 -------------
 """
 
-import sympy as _sp
-import numpy as _np
-from . import _glpoints
+import logging as _logging
 import multiprocessing as _mp
+
+import numpy as _np
+import sympy as _sp
+
 from grasp import types as _t
+
+from . import _glpoints
+
+_logger = _logging.getLogger("grasp.analyzers.calculus")
 
 
 def compute_numerical_function(
@@ -52,15 +58,14 @@ def compute_numerical_function(
     n_cores = _mp.cpu_count()
     N = _np.array(var_data).shape[-1]
     Nf = len(var_data)
-    if N < (2000 * n_cores) and Nf < 3:
-        # Multicore computation
-        print(f"Computation using all {n_cores} cores.")
+    if (2000 * n_cores) > N and Nf < 3:
+        _logger.info("Computation using all %d cores.", n_cores)
         val_dicts = _data_dict_creation(variables, var_data)
         computed_func = _multicore_computation(n_cores, func, val_dicts)
     else:
-        # lambdify computation
-        print(
-            "WARNING: computation time exceeding 30s. Compiling expression with NumPy."
+        _logger.warning(
+            "Computation time expected to exceed 30s; "
+            "compiling expression with NumPy."
         )
         computed_func = _lambdified_computation(func, variables, var_data)
     return _np.array(computed_func)
@@ -109,7 +114,7 @@ def error_propagation(
     """
     Computes the imput function's error with the standard error propagation
     formula:
-    :math:`\\varepsilon(F)=\sqrt{\sum_{i=1}^n {\\bigg(\\frac{\partial F}{\partial x_i}\\bigg)^2\\varepsilon_{x_i}^2} + 2\sum_{i\\ne j}{\\bigg(\\frac{\partial F}{\partial x_i}\\bigg)\\bigg(\\frac{\partial F}{\partial x_j}\\bigg)\\varepsilon_{x_i}\\varepsilon_{x_j}}\\rho(x_i,x_j)}`
+    :math:`\\varepsilon(F)=\\sqrt{\\sum_{i=1}^n {\\bigg(\\frac{\\partial F}{\\partial x_i}\\bigg)^2\\varepsilon_{x_i}^2} + 2\\sum_{i\\ne j}{\\bigg(\\frac{\\partial F}{\\partial x_i}\\bigg)\\bigg(\\frac{\\partial F}{\\partial x_j}\\bigg)\\varepsilon_{x_i}\\varepsilon_{x_j}}\\rho(x_i,x_j)}`
 
     Parameters
     ----------
@@ -137,7 +142,7 @@ def error_propagation(
         corr = _np.eye(len(variables), dtype=object)
     errors = []
     for i, var1 in enumerate(variables):
-        errors.append(_sp.symbols("epsilon_{}".format(var1)))
+        errors.append(_sp.symbols(f"epsilon_{var1}"))
         for j, var2 in enumerate(variables):
             if i != j:
                 corr[i][j] = corr[i][j] * _sp.symbols(f"rho_{var1}_{var2}")

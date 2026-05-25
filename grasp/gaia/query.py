@@ -61,26 +61,74 @@ object:
     151 libname_gspphot
 """
 
-import os as _os
-import numpy as _np
 import configparser as _cp
-from grasp import types as _gt
+import logging as _logging
+import os as _os
+
+import numpy as _np
 from astropy import units as _u
 from astroquery.gaia import Gaia as _Gaia
-from grasp.core.osutils import (
-    get_kwargs,
-    timestamp as _ts,
-    load_data as _loadData,
-    tnlist as _tnlist,
-)
+
+from grasp import types as _gt
 from grasp.core.folder_paths import (
     BASE_DATA_PATH as _BDP,
+)
+from grasp.core.folder_paths import (
     CLUSTER_DATA_FOLDER as _CDF,
+)
+from grasp.core.folder_paths import (
     UNTRACKED_DATA_FOLDER as _UD,
 )
+from grasp.core.folder_paths import (
+    ensure_data_dir as _ensure_data_dir,
+)
+from grasp.core.osutils import (
+    get_kwargs,
+)
+from grasp.core.osutils import (
+    load_data as _loadData,
+)
+from grasp.core.osutils import (
+    timestamp as _ts,
+)
+from grasp.core.osutils import (
+    tnlist as _tnlist,
+)
+
+_logger = _logging.getLogger("grasp.gaia.query")
 
 _QDATA = "query_data.fits"
 _QINFO = "query_info.ini"
+
+
+def _split_gaia_table(gaia_table: _gt.Optional[_gt.Union[str, list[str]]]) -> tuple[str, str]:
+    """Return ``(schema, table_name)`` for a possibly qualified Gaia table id.
+
+    The Gaia ADQL service exposes tables as ``schema.table`` (``gaiadr3.gaia_source``,
+    ``gaiadr2.gaia_source``, ...). Knowing the schema is necessary to build
+    fully-qualified column references such as ``gaiadr2.gaia_source.ra``.
+
+    Parameters
+    ----------
+    gaia_table : str or list[str] or None
+        The Gaia table name. If a list is passed, the first entry is used for
+        the qualifier (downstream queries only target the primary table).
+        ``None`` defaults to ``"gaiadr3.gaia_source"``.
+
+    Returns
+    -------
+    schema, table_name : tuple[str, str]
+        Schema and table components. If ``gaia_table`` is not qualified the
+        schema defaults to ``"gaiadr3"``.
+    """
+    if gaia_table is None:
+        return "gaiadr3", "gaia_source"
+    if isinstance(gaia_table, (list, tuple)):
+        gaia_table = gaia_table[0]
+    if "." in gaia_table:
+        schema, _, name = gaia_table.partition(".")
+        return schema, name
+    return "gaiadr3", gaia_table
 
 
 def available_tables(key: _gt.Optional[str] = None):
@@ -194,11 +242,17 @@ class GaiaQuery:
         _Gaia.MAIN_GAIA_TABLE = gaia_table
         _Gaia.ROW_LIMIT = -1
         self._table = gaia_table
+        self._schema, self._table_name = _split_gaia_table(gaia_table)
         self._path = _BDP
         self._fold = None
+        # ``{table}`` is fully-qualified (e.g. ``gaiadr2.gaia_source``); ``ra``
+        # and ``dec`` are referenced without an explicit schema qualifier so
+        # the same template works for any data release. The optional
+        # ``{ra_col}`` / ``{dec_col}`` placeholders kept on the class allow a
+        # qualified form when the caller asks for it.
         self._baseQ = """SELECT {data}
 FROM {table}
-WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRCLE('ICRS',{circle}))=1
+WHERE CONTAINS(POINT('ICRS', {ra_col}, {dec_col}), CIRCLE('ICRS', {circle})) = 1
     {cond}"""
         self.last_result = None
         self.last_query = None
@@ -211,7 +265,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
                 "Conditions_Applied": "None",
             }
         }
-        print(f"Initialized with Gaia table: '{gaia_table}'")
+        _logger.info("Initialized with Gaia table: '%s'", gaia_table)
 
     def __repr__(self):
         """The representation"""
@@ -240,22 +294,27 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         ----------
         adql_cmd : str
             The ADQL command to execute.
-            _Hint_: It is higly recommended to use the triple quote \""" to
+            _Hint_: It is highly recommended to use the triple quote ``\"""`` to
             write the command, in order to avoid problems with the
             indentation and the line breaks.
 
-            Example:
-            ```python
-            adql_cmd = '''SELECT source_id, ra, dec
-            FROM gaiadr3.gaia_source
-            WHERE CONTAINS(POINT('ICRS',ra,dec),CIRCLE('ICRS',ra,dec,radius))=1'''
-            ```
+            Example::
 
-            Refer to the
-            <a href=https://www.cosmos.esa.int/web/gaia-users/archive/writing-queries#query_example_1>
-            ESA Cosmos</a> documentation for query examples, and to the
-            <a href=https://ivoa.net/documents/ADQL/20230418/PR-ADQL-2.1-20230418.html#tth_sEc4.2.9>
-            ADQL</a> documentation of syntax and functions.
+                adql_cmd = '''SELECT source_id, ra, dec
+                FROM gaiadr3.gaia_source
+                WHERE CONTAINS(
+                    POINT('ICRS', ra, dec),
+                    CIRCLE('ICRS', 10.0, 20.0, 0.1)
+                ) = 1'''
+
+            Note that the ADQL ``CIRCLE`` geometry function takes
+            ``('frame', ra_center, dec_center, radius)`` (four arguments,
+            see the IVOA `ADQL 2.0
+            <https://ivoa.net/documents/REC/ADQL/ADQL-20081030.html>`_ and
+            `ADQL 2.1 <https://ivoa.net/documents/ADQL/20230418/PR-ADQL-2.1-20230418.html#tth_sEc4.2.9>`_
+            specifications). Refer to the
+            `ESA Cosmos <https://www.cosmos.esa.int/web/gaia-users/archive/writing-queries#query_example_1>`_
+            documentation for further query examples.
         save : bool, optional
             Whether to save the obtained data with its information or not.
             Default is False, meaning the data will not be saved.
@@ -329,8 +388,8 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         """
         from grasp._utility.sample import GcSample
 
-        ra: _gt.Optional[float | str] = kwargs.get("ra", None)
-        dec: _gt.Optional[float | str] = kwargs.get("dec", None)
+        ra: _gt.Optional[float | str] = kwargs.get("ra")
+        dec: _gt.Optional[float | str] = kwargs.get("dec")
         name: str = kwargs.get("name", "UntrackedData")
         gc, ra, dec, savename = self._get_coordinates(gc, ra=ra, dec=dec, name=name)
         self._queryInfo = {"Scan_Info": {"RA": ra, "DEC": dec, "Scan_Radius": radius}}
@@ -406,7 +465,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         addata = kwargs.get("add_data", "")
         astrometry = "source_id, ra, ra_error, dec, dec_error, parallax, parallax_error,\
               pmra, pmra_error, pmdec, pmdec_error"
-        if not addata == "":
+        if addata != "":
             astrometry += ", " + addata
         astro_sample = self.free_gc_query(radius, gc, save, data=astrometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = astrometry
@@ -466,7 +525,7 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
         addata = get_kwargs(("add_data"), "", kwargs)
         photometry = "source_id, bp_rp, phot_bp_mean_flux, phot_rp_mean_flux, \
               phot_g_mean_mag, phot_bp_rp_excess_factor, teff_gspphot"
-        if not addata == "":
+        if addata != "":
             photometry += ", " + addata
         phot_sample = self.free_gc_query(radius, gc, save, data=photometry, **kwargs)
         self._queryInfo["Scan_Info"]["Data_Acquired"] = photometry
@@ -570,19 +629,19 @@ WHERE CONTAINS(POINT('ICRS',gaiadr3.gaia_source.ra,gaiadr3.gaia_source.dec),CIRC
             query = self._adqlWriter(ra, dec, radius, data=data, conditions=cond)
             job = _Gaia.launch_job_async(query)
             sample = job.get_results()
-            print(f"Sample number of sources: {len(sample):d}")
+            _logger.info("Sample number of sources: %d", len(sample))
             self.last_result = sample
             if save:
                 self._saveQuery(sample, gc_id)
         else:
-            print(
-                f"""Found data with the same conditions for object {gc_id} in
-{check[1]}.
-Loading it..."""
+            _logger.info(
+                "Found existing data for object %s at %s; loading it.",
+                gc_id,
+                check[1],
             )
             sample = _loadData(tn=check[1], as_sample=False)
             self.last_result = check[1]
-            print(f"Sample number of sources: {len(sample):d}")
+            _logger.info("Sample number of sources: %d", len(sample))
         return sample
 
     def _saveQuery(self, dat: _gt.TabularData, name: str):
@@ -598,14 +657,11 @@ Loading it..."""
             Where to save the data, usually the cluster's name.
 
         """
-        from astropy.table import Table, QTable
+        from astropy.table import QTable, Table
 
         config = _cp.ConfigParser()
         tn = _ts()
-        if name.upper() == "UNTRACKEDDATA":
-            fold = _UD
-        else:
-            fold = self._checkPathExist(name.upper())
+        fold = _UD if name.upper() == "UNTRACKEDDATA" else self._checkPathExist(name.upper())
         tnfold = _os.path.join(fold, tn)
         _os.mkdir(tnfold)
         data = _os.path.join(tnfold, _QDATA)
@@ -620,12 +676,12 @@ Loading it..."""
 
         warnings.warn(
             "The 'query_info.ini' will be deprecated in future versions, shifting to the use of fits headers",
-            DeprecationWarning,
+            DeprecationWarning, stacklevel=2,
         )
         with open(info, "w", encoding="UTF-8") as configfile:
             config.write(configfile)
-        print(data)
-        print(info)
+        _logger.info("Wrote query data to %s", data)
+        _logger.info("Wrote query info to %s", info)
 
     def _writeHeader(self, data: _gt.AstroTable, name: str) -> _gt.AstroTable:
         """
@@ -647,7 +703,7 @@ Loading it..."""
         sinfo = self._queryInfo["Scan_Info"]
         header = {
             "OBJECT": (
-                name.upper() if not name.upper() == "UNTRACKEDDATA" else "UNDEF",
+                name.upper() if name.upper() != "UNTRACKEDDATA" else "UNDEF",
                 "object name",
             ),
             "RA": (
@@ -671,7 +727,7 @@ Loading it..."""
                 "radius of scan circle [deg]",
             ),
             "CONDS": (
-                not sinfo["Conditions_Applied"] == "None",
+                sinfo["Conditions_Applied"] != "None",
                 "Conditions_Applied to the query",
             ),
         }
@@ -693,9 +749,7 @@ Loading it..."""
 
         """
         self._fold = _CDF(dest)
-        if not _os.path.exists(self._fold):
-            _os.makedirs(self._fold)
-            print(f"Path '{self._fold}' did not exist. Created.")
+        _ensure_data_dir(self._fold)
         return self._fold
 
     def _formatCheck(
@@ -761,10 +815,10 @@ Loading it..."""
         radius: str | _u.Quantity | float,
         data: str | list[str],
         conditions: str | list[str],
+        qualified_coords: bool = True,
     ) -> str:
         """
-        This function writes the query, correctly formatting all the variables
-        in order to be accepted by the GAIA ADQL language.
+        Build the ADQL query string for the currently selected Gaia table.
 
         Parameters
         ----------
@@ -773,17 +827,24 @@ Loading it..."""
         dec : str
             Declination.
         radius : str
-            Scan_Radius.
+            Scan radius.
         data : str
             Data to retrieve.
         conditions : list of str
             Conditions to apply.
+        qualified_coords : bool, optional
+            If ``True`` (default) ``ra`` and ``dec`` inside the ADQL
+            ``CONTAINS(...)`` predicate are emitted as fully-qualified names
+            using the schema parsed from ``gaia_table`` (e.g.
+            ``gaiadr2.gaia_source.ra``). The qualifier matches whatever
+            release the :class:`GaiaQuery` was instanced with; passing
+            ``False`` falls back to bare ``ra,dec`` references (the
+            ``FROM`` alias takes care of resolution).
 
         Returns
         -------
         query : str
             The full string to input the query with.
-
         """
         if isinstance(ra, _u.Quantity):
             ra = ra / _u.deg  # type: ignore
@@ -791,10 +852,22 @@ Loading it..."""
             dec = dec / _u.deg  # type: ignore
         if isinstance(radius, _u.Quantity):
             radius = radius / _u.deg  # type: ignore
-        circle = f"{ra},{dec},{radius:.3f}"
+        circle = f"{ra}, {dec}, {radius:.3f}"
         dat, cond = self._formatCheck(data, conditions)
+        if qualified_coords:
+            qualifier = f"{self._schema}.{self._table_name}"
+            ra_col = f"{qualifier}.ra"
+            dec_col = f"{qualifier}.dec"
+        else:
+            ra_col = "ra"
+            dec_col = "dec"
         query = self._baseQ.format(
-            data=dat, table=self._table, circle=circle, cond=cond
+            data=dat,
+            table=self._table,
+            circle=circle,
+            cond=cond,
+            ra_col=ra_col,
+            dec_col=dec_col,
         )
         self.last_query = query
         return query
@@ -826,8 +899,8 @@ Loading it..."""
         from grasp._utility.cluster import Cluster
 
         if gc is None:
-            ra: float = kwargs.get("ra", None)
-            dec: float = kwargs.get("dec", None)
+            ra: float = kwargs.get("ra")
+            dec: float = kwargs.get("dec")
             gc: Cluster = Cluster(ra=ra, dec=dec)
             savename: str = kwargs.get("name", "UntrackedData")
         else:
