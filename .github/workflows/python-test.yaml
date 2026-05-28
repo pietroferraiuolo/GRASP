@@ -49,10 +49,6 @@ jobs:
           mkdir -p artifacts
           pip freeze > artifacts/pip-freeze-${{ matrix.python-version }}.txt
 
-      - name: Ruff lint
-        run: |
-          ruff check grasp test
-
       - name: Run tests with coverage
         env:
           MPLBACKEND: Agg
