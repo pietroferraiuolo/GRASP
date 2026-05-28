@@ -76,7 +76,7 @@ from .analyzers.mcluster import docs as mcluster_docs
 from .analyzers.mcluster import mcluster_run
 from .formulary import Formulary, load_base_formulary
 from .gaia._zero_point import zero_point_correction
-from .gaia.query import GaiaQuery, available_tables
+# from .gaia.query import GaiaQuery, available_tables
 from .utils.rng import default_rng
 
 osu = core.osutils
@@ -97,7 +97,7 @@ def dr3():
     ;::;:.:;;:XXXXXXXXXXX::::::::;        __ _  __ _(_) __ _
     .;;..;;;:.:XXXXXXXXX$$$$$$$$$$X.     / _` |/ _` | |/ _` |
     :;..:;;;..:xXXXXXXX$$$$$$$$$$$$X    | (_| | (_| | | (_| |
-    :;:.:;;.XXXXXXXXX$$$$$$$$$$$$$$;     \\__, |\\__,_|_|\\__,_|
+    :;:.:;;.XXXXXXXXX$$$$$$$$$$$$$$;     \__, |\__,_|_|\__,_|
     .;;:.:X$$$$$$$$$$$$$$$$$$$$$$X.      |___/
     ..:;:$$$$$$$$$$$$$$$$$$$$$$X;.
      :;;;$$$$$$$$$$$$$$$$$$$$::;;             INITIALIZED
@@ -107,6 +107,8 @@ def dr3():
             ....::::.....
 """
     )
+    from .gaia.query import GaiaQuery
+
     return GaiaQuery()
 
 
@@ -120,9 +122,9 @@ __all__ = [
     "__license__",
     "__url__",
     "available_clusters",
-    "available_tables",
+    # "available_tables",
     "zero_point_correction",
-    "GaiaQuery",
+    # "GaiaQuery",
     "mcluster_run",
     "mcluster_docs",
     "calculus",

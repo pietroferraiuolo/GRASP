@@ -474,24 +474,27 @@ def histogram(
     fsize = kwargs.get("figsize", default_figure_size)
     verbose = _osu.get_kwargs(("kde_verbose", "verbose", "v"), False, kwargs)
     scale = _osu.get_kwargs(("scale", "yscale"), "linear", kwargs)
+
     if scale == "log":
         xlabel = f"log( {xlabel} )" if xlabel else "log( x )"
+
     if "xlim" in kwargs:
         if isinstance(kwargs["xlim"], tuple):
             xlim = kwargs["xlim"]
         else:
             raise TypeError("'xlim' arg must be a tuple")
+
     else:
         xlim = None
     n_bins = _osu.get_kwargs(("bins", "bin"), "knuth", kwargs)
+
     if n_bins == "knuth":
         from astropy.stats import knuth_bin_width
 
         _, n_bins = knuth_bin_width(data, return_bins=True)
     elif n_bins == "detailed":
         n_bins = int(1.5 * _np.sqrt(len(data)))
-    if dont_show:
-        _plt.ioff()
+
     _plt.figure(figsize=fsize)
     h = _plt.hist(data, bins=n_bins, color=hcolor, alpha=alpha)
     _plt.ylabel("counts")
@@ -501,6 +504,7 @@ def histogram(
     bins = h[1][: len(h[0])]
     counts = h[0]
     res = {"h": {"counts": counts, "bins": bins}}
+
     if kde:
         regression = _kde_estimator(
             data=data, bins=n_bins, method=kde_kind, verbose=verbose
@@ -509,10 +513,13 @@ def histogram(
         label = _kde_labels(kde_kind, regression.coeffs)
         _plt.plot(regression.x, regression.y, c=kcolor, label=label)
         _plt.legend(loc="best", fontsize="medium")
+
     if xlim is not None:
         _plt.xlim(xlim)
+
     if not dont_show:
         _plt.show()
+
     return res if out else None
 
 
@@ -734,6 +741,7 @@ def regressionPlot(
     x_data: _T.Optional[_T.Array] = None,
     y_data: _T.Optional[_T.Array] = None,
     f_type: str = "distribution",
+    dont_show: bool = False,
     **kwargs: dict[str, _T.Any],
 ):
     """
@@ -768,6 +776,10 @@ def regressionPlot(
         - 'distribution': the distribution (histogram) of the data is fitted
         - 'datapoint': the data points are fitted
         Default is 'distribution'.
+    dont_show : bool, optional
+        If True, the function will not show the plot and only return the figure 
+        and axes.
+        The default is False.
 
     Other Parameters
     ----------------
@@ -783,6 +795,8 @@ def regressionPlot(
     fmt : str
         Main plot style. Only works when passing a linear regression
         model. Default is '-' (normal "solid" plot).
+    rfmt : str
+        Residuals plot style. Default is 'o-' (points with a line).
     size : int or float
         Size of the scattered data points in the main plot.
         Alias: 's'.
@@ -807,7 +821,15 @@ def regressionPlot(
     legend : bool
         If True, a legend will be shown in the data plot. Default is True.
 
-
+    
+    Returns
+    -------
+    fig : matplotlib.figure.Figure
+        The figure object containing the plot.
+    fax : matplotlib.axes.Axes
+        The axes object for the main plot (data and fit).
+    rax : matplotlib.axes.Axes
+        The axes object for the residuals plot.
     """
     rm = _get_regression_model(regression_model, y_data, x_data, f_type)
     D = (rm.x.max() - rm.x.min()) * 0.02
@@ -873,7 +895,8 @@ def regressionPlot(
     )
     rax.plot(rm.x, rm.residuals, rfmt, c=rc, markersize=rs, linewidth=1.0, alpha=0.8)
     fig.suptitle(title, size=20, style="italic", family="cursive")
-    # _plt.show()
+    if not dont_show:
+        _plt.show()
     return fig, fax, rax
 
 
